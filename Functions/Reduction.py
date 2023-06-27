@@ -58,7 +58,7 @@ def ICC(df_all, output_path, plot=False):
 
     # save features to csv
     fts_remove_out = pd.DataFrame({"Feature": fts_remove})
-    fts_remove_out.to_csv(output_path + "/Features/Rd_ICC_Features.csv", index=False)
+    fts_remove_out.to_csv(output_path + "/Features/Rd_ICC_FeatureNames.csv", index=False)
     df_res.to_csv(output_path + "/Features/Rd_ICC_Values.csv", index=False)
     print("ICC redudant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
     print("-" * 30)
@@ -152,7 +152,7 @@ def Volume(df_all, output_path, plot=False):
     
     # save features to csv
     fts_remove_out = pd.DataFrame({"Feature": fts_remove})
-    fts_remove_out.to_csv(output_path + "/Features/Rd_VolCorr_Features.csv", index=False)
+    fts_remove_out.to_csv(output_path + "/Features/Rd_VolCorr_FeatureNames.csv", index=False)
     df_res.to_csv(output_path + "/Features/Rd_VolCorr_Values.csv", index=False)
     print("Volume redundant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
     print("-" * 30)
@@ -195,9 +195,9 @@ def RemoveFts(df_all, output_path):
     """
     print("-" * 30)
     print("Removing redundant features...")
-    fts_ICC = pd.read_csv(output_path + "/Features/Rd_ICC_Features.csv")
+    fts_ICC = pd.read_csv(output_path + "/Features/Rd_ICC_FeatureNames.csv")
     fts_ICC = fts_ICC["Feature"].values
-    fts_Vol = pd.read_csv(output_path + "/Features/Rd_VolCorr_Features.csv")
+    fts_Vol = pd.read_csv(output_path + "/Features/Rd_VolCorr_FeatureNames.csv")
     fts_Vol = fts_Vol["Feature"].values
 
     fts_remove = np.concatenate((fts_ICC, fts_Vol))

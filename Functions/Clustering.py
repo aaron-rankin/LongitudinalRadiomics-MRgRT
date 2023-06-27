@@ -8,59 +8,81 @@ import scipy.cluster.hierarchy as spch
 import statsmodels.tsa.stattools as sts
 from scipy import stats
 from Functions import UsefulFunctions as UF
-from Functions import ImageFunctions as IF
 from scipy.spatial import distance
-from Features import Reduction as FR
-from Features import Extraction as FE
+# from Features import Reduction as FR
+# from Features import Extraction as FE
 
 ####################################################
 
-def DistanceMatrix(DataRoot, Norm, tag):
+def DistanceMatrix(df, outdir, plot=False):
     '''
-    Calculates Eucledian distance between all features for each patient
+    Calculates the Euclidean distance between feature pair trajectories
+    for each patient.
+    Saves the distance matrix for each patient to a csv file.
+    
+    df: dataframe with all feature values across treatment for one region
+    out_dir: output
+    tag: tag for output to denote any changes
+    output: print output
+    plot: saves a heatmap of the distance matrix
     '''
-    root = DataRoot
-    df_all = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Longitudinal_All_fts_" + tag + ".csv")
+    
+    features = df["Feature"].unique()
+    PatIDs = df["PatID"].unique()
 
-    fts_ICC = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Longitudinal_FeaturesRemoved_ICC_" + tag + ".csv")
-    fts_Vol = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Longitudinal_FeaturesRemoved_Volume_" + tag + ".csv")
+    df_res = pd.DataFrame()
 
-    df_all = df_all[~df_all["Feature"].isin(fts_ICC["Feature"])]
-    df_all = df_all[~df_all["Feature"].isin(fts_Vol["Feature"])]
+    print("Calculating Euclidean distance between feature pair trajectories...")
 
-    patIDs = df_all["PatID"].unique()
-    fts = df_all["Feature"].unique()
+    if os.path.isdir(outdir + "/DM/") == False:
+        os.mkdir(outdir + "/DM/")
+        os.mkdir(outdir + "/DM/data/")
+        os.mkdir(outdir + "/DM/figs/")
+    
+    for pat in tqdm(PatIDs):
+        df_pat = df[df["PatID"] == pat]
 
-    print("Volume Redundant features: {}".format(len(fts_Vol)))
-    print("ICC Redundant features: {}".format(len(fts_ICC)))
-    print("Remainder of features: {}".format(len(fts)))
-    # loop through patients
-    for pat in tqdm(patIDs):
-        df_pat = df_all[df_all["PatID"] == pat]
+        matrix = np.zeros((len(features), len(features)))
 
-        # empty matrix
-        mat = np.zeros((len(fts), len(fts)))
+        for i, ft1 in enumerate(features):
+            df_ft = df_pat[df_pat["Feature"] == ft1]
+            vals1 = df_ft["FeatureValue"].values
+            if vals1[0] == 0:
+                vals1[0] = 1
+            vals1_ch = (vals1 - vals1[0]) / vals1[0]
+            for j, ft2 in enumerate(features):
+                df_ft2 = df_pat[df_pat["Feature"] == ft2]
+                vals2 = df_ft2["FeatureValue"].values
+                if vals2[0] == 0:
+                    vals2[0] = 1
+                
+                vals2_ch = (vals2 - vals2[0]) / vals2[0]
+            
+                # get euclidean distance
+                # fill nan with 0
+                if np.isnan(vals1_ch).any() == True:
+                    print(pat)
+                    print(ft1, vals1)
+                if np.isnan(vals2_ch).any() == True:
+                    print(pat)
+                    print(ft2, vals2)
+                
+                matrix[i,j] = distance.euclidean(vals1_ch, vals2_ch)
+    
+        df_dist = pd.DataFrame(matrix, columns=features, index=features)
+        df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
 
-        for ft1 in range(len(fts)):
-            vals_ft1 = df_pat[df_pat["Feature"] == fts[ft1]]["FeatureChange"].values
+        if plot == True:
+            plt.figure(figsize=(10,10))
+            sns.heatmap(df_dist, cmap="viridis")
+            plt.title("{} - {}".format(str(pat)), fontsize=20)
+            # make sure all ticks show
+            plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
+            plt.yticks(np.arange(len(features)) + 0.5, features, fontsize=6)
+            
 
-            for ft2 in range(len(fts)):
-                vals_ft2 = df_pat[df_pat["Feature"] == fts[ft2]]["FeatureChange"].values
-
-                # calculate correlation
-                # mat[ft1, ft2] = stats.pearsonr(vals_ft1, vals_ft2)[0]
-                mat[ft1, ft2] = distance.euclidean(vals_ft1, vals_ft2)
-
-        # save matrix
-        df_dist = pd.DataFrame(mat, columns = fts, index = fts)  
-        df_dist.to_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm +"\\Longitudinal\\DM\\csvs\\" + str(pat) + "_" + tag + ".csv")
-
-        # plot matrix
-        plt.figure(figsize=(20,20))
-        sns.set_theme(style="white")
-        plt.title("DM - {}".format(pat), fontsize=40)
-        sns.heatmap(df_dist, cmap='viridis', cbar_kws={'label': 'Euclidean Distance'})
-        plt.savefig(root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\"+ Norm +"\\Longitudinal\\DM\\Figs\\" + str(pat) + "_" + tag + ".png")
+            plt.savefig(outdir + "/DM/figs/" + str(pat) + ".png")
+            plt.close()
 
 ####################################################
 
@@ -71,9 +93,9 @@ def ClusterCheck(df, fts, t_val, tries, df_DM):
         df_c = df
         df_new = pd.DataFrame()
         # feature names
-        df_new["FeatureName"] = fts
+        df_new["Feature"] = fts
         # cluster labels
-        c = df_c["Cluster"].values[0]
+        c = df_c["ClusterLabel"].values[0]
         
         # need to filter distance matrix to only include features in cluster
         df_DM_c = df_DM[fts]
@@ -84,55 +106,63 @@ def ClusterCheck(df, fts, t_val, tries, df_DM):
         arr_DM_c = df_DM_c.to_numpy()
         
         # cluster
-        df_new["Cluster"] = spch.fclusterdata(arr_DM_c, t=t_val, criterion="distance", method="ward")
-        df_new["Cluster"] = str(c*100) + str(tries) + df_new["Cluster"].astype(str)
-        df_new["Cluster"] = df_new["Cluster"].astype(int)
-        df_new["NumFts"] = df_new.groupby("Cluster")["Cluster"].transform("count")
-        number_fts = df_new["NumFts"].unique()
-        fts_check = df_new.loc[df_new["NumFts"] > 10]["FeatureName"].values
+        df_new["ClusterLabel"] = spch.fclusterdata(arr_DM_c, t=t_val, criterion="distance", method="ward")
+        df_new["ClusterLabel"] = str(c*100) + str(tries) + df_new["ClusterLabel"].astype(str)
+        df_new["ClusterLabel"] = df_new["ClusterLabel"].astype(int)
+        df_new["ClusterNumFts"] = df_new.groupby("ClusterLabel")["ClusterLabel"].transform("count")
+        number_fts = df_new["ClusterNumFts"].unique()
+        fts_check = df_new.loc[df_new["ClusterNumFts"] > 10]["Feature"].values
         #print(t_val, number_fts)#, df_new)
         return number_fts, df_new, fts_check
 
 ####################################################
 
-def ClusterFeatures(DataRoot, Norm, s_t_val, tag):
+def ClusterFeatures(df, outdir, s_t_val, plot=False):
     '''
     Cluster features using distance matrix, 
     t_val is threshold for clustering, 
     method is clustering forumula
     performs clustering until all clusters have less than 10 features
     '''
-    root = DataRoot
-    DM_dir = root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\" + Norm + "\\Longitudinal\\DM\\csvs\\"
-    out_dir = root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\"+ Norm + "\\Longitudinal\\ClusterLabels\\"
+    print("-"*30)
+    print("Clustering Feature Trajectories...")
+    
+    DM_dir = outdir + "/DM/data/"
+    
+    outpath = outdir + "/Clustering/"
+    if os.path.exists(outpath) == False:
+        os.mkdir(outpath)
+        os.mkdir(outpath + "/Labels/")
+        os.mkdir(outpath + "/Plots")
 
-    patIDs = UF.SABRPats()
+    df["ClusterLabel"] = ""
+    df["ClusterNumFts"] = ""
+    patIDs = df["PatID"].unique()
+    fts = df["Feature"].unique()
 
     cluster_method = "weighted"
 
     for pat in tqdm(patIDs):
-        df_DM = pd.read_csv(DM_dir + pat + "_" + tag + ".csv")
+        df_DM = pd.read_csv(DM_dir + str(pat) + ".csv")
         df_DM.set_index("Unnamed: 0", inplace=True)
         arr_DM = df_DM.to_numpy()
         fts = df_DM.columns
 
         # create temp df to hold ft name and label
         df_labels = pd.DataFrame()
-        df_labels["FeatureName"] = fts
+        df_labels["Feature"] = fts
 
         # cluster function using DM, need to experiment with t_val and method
-        df_labels["Cluster"] = spch.fclusterdata(arr_DM, t=s_t_val, criterion="distance", method=cluster_method)
-        df_labels.set_index("FeatureName", inplace=True)
+        df_labels["ClusterLabel"] = spch.fclusterdata(arr_DM, t=s_t_val, criterion="distance", method=cluster_method)
+        df_labels.set_index("Feature", inplace=True)
         
         # check number of features in each cluster
-        df_labels["NumFts"] = df_labels.groupby("Cluster")["Cluster"].transform("count")
-        df_labels["Cluster"] = df_labels["Cluster"].astype(int)
-        #print("---------------------------")
-        #print("Patient: {}".format(pat))
-        #print(df_labels.loc[df_labels["NumFts"] > 10])
+        df_labels["ClusterNumFts"] = df_labels.groupby("ClusterLabel")["ClusterLabel"].transform("count")
+        df_labels["ClusterLabel"] = df_labels["ClusterLabel"].astype(int)
+        
         # loop through clusters 
-        for c in df_labels["Cluster"].unique():
-                df_c = df_labels[df_labels["Cluster"] == c]
+        for c in df_labels["ClusterLabel"].unique():
+                df_c = df_labels[df_labels["ClusterLabel"] == c]
                 number_fts = len(df_c)
                 # check numnber of features in cluster
                 if number_fts > 10:
@@ -141,29 +171,34 @@ def ClusterFeatures(DataRoot, Norm, s_t_val, tag):
                         check_fts = df_c.index.values
                         tries = 1
                         number_fts, df_labels2, check_fts = ClusterCheck(df_c, check_fts, t_val, tries, df_DM)
-                        new_fts = df_labels2["FeatureName"].unique()
-                        df_labels.loc[new_fts, "Cluster"] = df_labels2["Cluster"].values
-                        df_labels["NumFts"] = df_labels.groupby("Cluster")["Cluster"].transform("count")
+                        new_fts = df_labels2["Feature"].unique()
+                        df_labels.loc[new_fts, "ClusterLabel"] = df_labels2["ClusterLabel"].values
+                        df_labels["ClusterNumFts"] = df_labels.groupby("ClusterLabel")["ClusterLabel"].transform("count")
 
                         while number_fts.max() > 10:
                                 t_val = t_val - 0.2
                                 tries += 1
                                 #print("Cluster: {} Tries: {} T_val: {}".format(c, tries, t_val))
                                 number_fts, df_labels2, check_fts = ClusterCheck(df_c, check_fts, t_val, tries, df_DM)
-                                new_fts = df_labels2["FeatureName"].unique()
-                                df_labels.loc[new_fts, "Cluster"] = df_labels2["Cluster"].values
+                                new_fts = df_labels2["Feature"].unique()
+                                df_labels.loc[new_fts, "ClusterLabel"] = df_labels2["ClusterLabel"].values
                         
-        df_labels["NumFts"] = df_labels.groupby("Cluster")["Cluster"].transform("count")
+        df_labels["ClusterNumFts"] = df_labels.groupby("ClusterLabel")["ClusterLabel"].transform("count")
+        
+        df_labels.to_csv(outpath + "/Labels/" + str(pat) + ".csv")
+
+
+
 
         # read in df with ft vals and merge
-        ft_vals = pd.read_csv(root +"Aaron\\ProstateMRL\\Data\\Paper1\\"+ Norm + "\\Features\\Longitudinal_All_fts_" + tag + ".csv")
-        ft_vals["PatID"] = ft_vals["PatID"].astype(str)
-        pat_ft_vals = ft_vals[ft_vals["PatID"] == pat]
-        pat_ft_vals = pat_ft_vals.merge(df_labels, left_on="Feature", right_on="FeatureName")
+        # ft_vals = pd.read_csv(root +"Aaron\\ProstateMRL\\Data\\Paper1\\"+ Norm + "\\Features\\Longitudinal_All_fts_" + tag + ".csv")
+        # ft_vals["PatID"] = ft_vals["PatID"].astype(str)
+        # pat_ft_vals = ft_vals[ft_vals["PatID"] == pat]
+        # pat_ft_vals = pat_ft_vals.merge(df_labels, left_on="Feature", right_on="FeatureName")
 
         # output is feature values w/ cluster labels
-        pat_ft_vals.to_csv(out_dir + pat + "_" + tag + ".csv")
-
+        # pat_ft_vals.to_csv(out_dir + pat + "_" + tag + ".csv")
+    print("-" *30)
 ####################################################
 
 def ClusterCount(root, Norm, output, tag):
@@ -238,7 +273,7 @@ def ClusterCC(Cluster_ft_df):
         
         for f in fts:
             ft_df = Cluster_ft_df[Cluster_ft_df["Feature"] == f]
-            ft_vals = ft_df.FeatureChange.values
+            ft_vals = ft_df.FeatureValue.values
             vals[f] = ft_vals
         
         for v in vals:
@@ -264,35 +299,40 @@ def ClusterCC(Cluster_ft_df):
 
 ####################################################
 
-def ClusterSelection(DataRoot, Norm, tag, output):
+def FeatureSelection(df, outdir):
     '''
     Loops through each patient  to select the 'best' feature for each cluster by performing cross-correlation
     Discards clusters with less than 3 features
     Selects features which are ranked in top 10 across all patients
     '''
-    root = DataRoot
-    patIDs = UF.SABRPats()
+    print("-" *30)
+    print("Feature Selection")
+    print("Calculating Cross-Correlation values...")
+    patIDs = df["PatID"].unique()
 
-    labels_dir = root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\" + Norm + "\\Longitudinal\\ClusterLabels\\"
-    out_dir = root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\"+ Norm +"\\Features\\"
+    labels_dir = outdir + "/Clustering/Labels/"
+    out_dir = outdir + "/Features/"
     
     df_result = pd.DataFrame()
     for pat in tqdm(patIDs):
         # read in feature vals and associated cluster labels
-        df_pat = pd.read_csv(labels_dir + pat + "_" + tag + ".csv")
+        df_pat_c = pd.read_csv(labels_dir + str(pat) + ".csv")
+        df_pat_v = df.loc[df["PatID"] == pat]
 
-        cluster_num = df_pat["Cluster"].unique()
+        cluster_num = df_pat_c["ClusterLabel"].unique()
         fts_selected = []
         df_result_pat = pd.DataFrame()
 
         # for each patient loop through each cluster to get 'best' feature
         for c in cluster_num:
-            df_cluster = df_pat[df_pat["Cluster"] == c]
+            df_cluster = df_pat_c[df_pat_c["ClusterLabel"] == c]
+            features_c = df_cluster["Feature"].unique()
+            df_cl_v = df_pat_v.loc[df_pat_v["Feature"].isin(features_c)]
 
             # function loops through each cluster and gets feature values
             # performs cross-correlation and returns feature with highest mean correlation to all other features
             # returns NULL if < 3 features in cluster 
-            ft_selected = ClusterCC(df_cluster)
+            ft_selected = ClusterCC(df_cl_v)
 
             if ft_selected != 0:
                 for f in ft_selected:
@@ -302,7 +342,7 @@ def ClusterSelection(DataRoot, Norm, tag, output):
             row = {}
 
         for f in fts_selected:
-            row["patID"] = pat
+            row["PatID"] = pat
             row["Feature"] = f
             df_result_pat = df_result_pat.append(row, ignore_index=True)
         
@@ -314,16 +354,19 @@ def ClusterSelection(DataRoot, Norm, tag, output):
     #print(df_result)
     # get features with counts >= counts
     fts = df_result[df_result["Counts"] >= counts]["Feature"].values
-    if output == True:
-        print("\nSelected Features: ({})".format(len(fts)))
-        for f in fts:
-            print(f)
+    print("-" * 30)    
+    print("Selected Features: ")
+    for ft in fts:
+        print(ft)
+    print("-" * 30)
+    print("Number of Selected Features: {}".format(len(fts)))
+    
     df_result = df_result[df_result["Counts"] >= counts]
 
     # drop counts
     df_result.drop(columns=["Counts"], inplace=True)
-    df_result.to_csv(out_dir + "Longitudinal_SelectedFeatures_" + tag + ".csv")
-
+    df_result.to_csv(out_dir + "Features_Selected.csv")
+    print("-" * 30)
 ####################################################
 
 def LongitudinalModel(DataRoot, Norm, Extract, t_val, tag, output=False):
