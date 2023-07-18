@@ -422,7 +422,6 @@ def FeatureSelection(df, outdir):
     df_result = df_result[df_result["Counts"] >= counts]
 
     # drop counts
-    df_result.drop(columns=["Counts"], inplace=True)
     df_result.to_csv(out_dir + "Features_Selected.csv")
     print("-" * 30)
 ####################################################
@@ -434,7 +433,8 @@ def ClusterCC_Delta(Cluster_ft_df):
     '''
     fts = Cluster_ft_df.Feature.unique()
     num_fts = len(fts)
-   
+    ft_selected = []
+
     if num_fts > 2:
         vals = {} # stores fts and values
         diffs = {}
@@ -443,7 +443,7 @@ def ClusterCC_Delta(Cluster_ft_df):
         for f in fts:
             ft_df = Cluster_ft_df[Cluster_ft_df["Feature"] == f]
             ft_vals = ft_df.FeatureValue.values
-            vals[f] = ft_vals
+            vals[f] = ft_vals[0]
         
         values = list(vals.values())
         mean = sum(values) / len(values)
@@ -451,9 +451,10 @@ def ClusterCC_Delta(Cluster_ft_df):
         for f in fts:
             diffs[f] = abs(mean - vals[f])
         
-
-        sorted_vals = sorted(diffs.items(), key=lambda x: x[1])[:num_fts]
-        ft_selected = sorted_vals[0:num_sel]
+        sorted_vals = sorted(diffs.items(), key=lambda x: x[1])
+        # print("sorted: ", sorted_vals[0])
+        for i in range(0, int(num_sel), 1):
+            ft_selected.append(sorted_vals[i][0])
 
     else: 
         ft_selected = 0
@@ -526,7 +527,6 @@ def FeatureSelection_Delta(df, outdir):
     df_result = df_result[df_result["Counts"] >= counts]
 
     # drop counts
-    df_result.drop(columns=["Counts"], inplace=True)
     df_result.to_csv(out_dir + "Features_Selected.csv")
     print("-" * 30)
 

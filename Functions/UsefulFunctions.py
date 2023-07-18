@@ -1,4 +1,3 @@
-from asyncio.windows_events import NULL
 from cmath import nan
 import SimpleITK as sitk
 import numpy as np
