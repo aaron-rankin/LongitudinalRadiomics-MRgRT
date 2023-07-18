@@ -75,7 +75,7 @@ def DistanceMatrix(df, outdir, plot=False):
         if plot == True:
             plt.figure(figsize=(10,10))
             sns.heatmap(df_dist, cmap="viridis")
-            plt.title("{} - {}".format(str(pat)), fontsize=20)
+            plt.title(str(pat), fontsize=20)
             # make sure all ticks show
             plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
             plt.yticks(np.arange(len(features)) + 0.5, features, fontsize=6)
@@ -86,6 +86,64 @@ def DistanceMatrix(df, outdir, plot=False):
 
 ####################################################
 
+def DistanceMatrix_Delta(df, outdir, plot=False):
+    '''
+    Calculates the Euclidean distance between feature pair trajectories
+    for each patient.
+    Saves the distance matrix for each patient to a csv file.
+    
+    df: dataframe with all feature values across treatment for one region
+    out_dir: output
+    tag: tag for output to denote any changes
+    output: print output
+    plot: saves a heatmap of the distance matrix
+    '''
+    
+    features = df["Feature"].unique()
+    PatIDs = df["PatID"].unique()
+
+    df_res = pd.DataFrame()
+
+    print("Calculating Euclidean distance between feature pair trajectories...")
+
+    if os.path.isdir(outdir + "/DM/") == False:
+        os.mkdir(outdir + "/DM/")
+        os.mkdir(outdir + "/DM/data/")
+        os.mkdir(outdir + "/DM/figs/")
+    
+    for pat in tqdm(PatIDs):
+        df_pat = df[df["PatID"] == pat]
+
+        matrix = np.zeros((len(features), len(features)))
+
+        for i, ft1 in enumerate(features):
+            df_ft = df_pat[df_pat["Feature"] == ft1]
+            vals1 = df_ft["FeatureValue"].values
+
+            for j, ft2 in enumerate(features):
+                df_ft2 = df_pat[df_pat["Feature"] == ft2]
+                vals2 = df_ft2["FeatureValue"].values
+            
+                # get euclidean distance
+                
+                matrix[i,j] = distance.euclidean(vals1, vals2)
+    
+        df_dist = pd.DataFrame(matrix, columns=features, index=features)
+        df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
+
+        if plot == True:
+            plt.figure(figsize=(10,10))
+            sns.heatmap(df_dist, cmap="viridis")
+            plt.title(str(pat), fontsize=20)
+            # make sure all ticks show
+            plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
+            plt.yticks(np.arange(len(features)) + 0.5, features, fontsize=6)
+            
+
+            plt.savefig(outdir + "/DM/figs/" + str(pat) + ".png")
+            plt.close()
+
+####################################################
 def ClusterCheck(df, fts, t_val, tries, df_DM):
         '''
         If cluster has more than 10 features, re-cluster with smaller t_val
@@ -367,6 +425,111 @@ def FeatureSelection(df, outdir):
     df_result.drop(columns=["Counts"], inplace=True)
     df_result.to_csv(out_dir + "Features_Selected.csv")
     print("-" * 30)
+####################################################
+
+def ClusterCC_Delta(Cluster_ft_df):
+    '''
+    Input - df filtered for norm, patient, cluster
+    Output - performs cross-correlation within clustered fts and returns ft most strongly correlated with the rest, if more than 2 fts present
+    '''
+    fts = Cluster_ft_df.Feature.unique()
+    num_fts = len(fts)
+   
+    if num_fts > 2:
+        vals = {} # stores fts and values
+        diffs = {}
+        num_sel = np.rint(len(fts) * 0.2)
+        
+        for f in fts:
+            ft_df = Cluster_ft_df[Cluster_ft_df["Feature"] == f]
+            ft_vals = ft_df.FeatureValue.values
+            vals[f] = ft_vals
+        
+        values = list(vals.values())
+        mean = sum(values) / len(values)
+
+        for f in fts:
+            diffs[f] = abs(mean - vals[f])
+        
+
+        sorted_vals = sorted(diffs.items(), key=lambda x: x[1])[:num_fts]
+        ft_selected = sorted_vals[0:num_sel]
+
+    else: 
+        ft_selected = 0
+
+    return ft_selected
+
+####################################################
+def FeatureSelection_Delta(df, outdir):
+    '''
+    Loops through each patient  to select the 'best' feature for each cluster by performing cross-correlation
+    Discards clusters with less than 3 features
+    Selects features which are ranked in top 10 across all patients
+    '''
+    print("-" *30)
+    print("Feature Selection")
+    print("Calculating Cross-Correlation values...")
+    patIDs = df["PatID"].unique()
+
+    labels_dir = outdir + "/Clustering/Labels/"
+    out_dir = outdir + "/Features/"
+    
+    df_result = pd.DataFrame()
+    for pat in tqdm(patIDs):
+        # read in feature vals and associated cluster labels
+        df_pat_c = pd.read_csv(labels_dir + str(pat) + ".csv")
+        df_pat_v = df.loc[df["PatID"] == pat]
+
+        cluster_num = df_pat_c["ClusterLabel"].unique()
+        fts_selected = []
+        df_result_pat = pd.DataFrame()
+
+        # for each patient loop through each cluster to get 'best' feature
+        for c in cluster_num:
+            df_cluster = df_pat_c[df_pat_c["ClusterLabel"] == c]
+            features_c = df_cluster["Feature"].unique()
+            df_cl_v = df_pat_v.loc[df_pat_v["Feature"].isin(features_c)]
+
+            # function loops through each cluster and gets feature values
+            # performs cross-correlation and returns feature with highest mean correlation to all other features
+            # returns NULL if < 3 features in cluster 
+            ft_selected = ClusterCC_Delta(df_cl_v)
+
+            if ft_selected != 0:
+                for f in ft_selected:
+                    fts_selected.append(f)
+        
+        # filter through all feature values and select only new features
+            row = {}
+
+        for f in fts_selected:
+            row["PatID"] = pat
+            row["Feature"] = f
+            df_result_pat = df_result_pat.append(row, ignore_index=True)
+        
+        df_result = df_result.append(df_result_pat, ignore_index=True)
+
+    df_result = df_result.Feature.value_counts().rename_axis("Feature").reset_index(name="Counts")
+    # get number of counts at 10th row
+    counts = df_result.iloc[10]["Counts"]
+    #print(df_result)
+    # get features with counts >= counts
+    fts = df_result[df_result["Counts"] >= counts]["Feature"].values
+    print("-" * 30)    
+    print("Selected Features: ")
+    for ft in fts:
+        print(ft)
+    print("-" * 30)
+    print("Number of Selected Features: {}".format(len(fts)))
+    
+    df_result = df_result[df_result["Counts"] >= counts]
+
+    # drop counts
+    df_result.drop(columns=["Counts"], inplace=True)
+    df_result.to_csv(out_dir + "Features_Selected.csv")
+    print("-" * 30)
+
 ####################################################
 
 def LongitudinalModel(DataRoot, Norm, Extract, t_val, tag, output=False):
