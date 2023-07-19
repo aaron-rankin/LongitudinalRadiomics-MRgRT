@@ -10,7 +10,7 @@ from tqdm import tqdm
 # import UsefulFunctions as UF
 
 ####################################################
-def ExtractFeatures(PatID, Mask, Fraction, image_path, mask_path, extractor_params):
+def ExtractFeatures(PatID, Fraction,  Contour, ContourType, image_path, mask_path, extractor_params):
     """
     PatID: Patient ID
     Mask: Mask name
@@ -37,9 +37,10 @@ def ExtractFeatures(PatID, Mask, Fraction, image_path, mask_path, extractor_para
     Features.columns = [col.replace("original_", "") for col in Features.columns]
     Features.insert(0, "PatID", PatID)
     Features.insert(1, "Fraction", Fraction)
-    Features.insert(2, "Mask", Mask)
+    Features.insert(2, "Contour", Contour)
+    Features.insert(3, "ContourType", ContourType)
 
-    Features = Features.melt(id_vars = ["PatID", "Fraction", "Mask"], var_name = "Feature", value_name = "FeatureValue")
+    Features = Features.melt(id_vars = ["PatID", "Fraction", "Contour", "ContourType"], var_name = "Feature", value_name = "FeatureValue")
 
     return Features
 
