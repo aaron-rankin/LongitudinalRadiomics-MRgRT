@@ -513,6 +513,7 @@ def FeatureSelection_Delta(df, outdir):
 
     df_result = df_result.Feature.value_counts().rename_axis("Feature").reset_index(name="Counts")
     # get number of counts at 10th row
+    df_result.to_csv(out_dir + "Features_Selected_Full.csv")
     counts = df_result.iloc[10]["Counts"]
     #print(df_result)
     # get features with counts >= counts

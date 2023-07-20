@@ -40,8 +40,7 @@ def ICC(df_all, output_path, plot=False):
         
         for ft in tqdm(features):
             df_ft = df_fr.loc[df_fr["Feature"] == ft]
-
-            icc = pg.intraclass_corr(data=df_ft, targets="PatID", raters="Mask", ratings="FeatureValue")
+            icc = pg.intraclass_corr(data=df_ft, targets="PatID", raters="ContourType", ratings="FeatureValue")
             df_res = df_res.append({"Feature": ft, "Fraction": fr, "ICC": icc["ICC"][0]}, ignore_index=True)
 
     df_res["ICC_Class"] = df_res["ICC"].apply(lambda x: "Poor" if x < 0.5 else ("Moderate" if x < 0.75 else ("Good" if x < 0.9 else "Excellent")))
