@@ -32,6 +32,7 @@ def ICC(df_all, output_path, plot=False):
     print("Calculating ICC...")
     features = df_all["Feature"].unique()
     fractions = df_all["Fraction"].unique()
+    ContourType = df_all["ContourType"].unique()[0]
 
     df_res = pd.DataFrame(columns=["Feature", "Fraction", "ICC"])
 
@@ -57,8 +58,8 @@ def ICC(df_all, output_path, plot=False):
 
     # save features to csv
     fts_remove_out = pd.DataFrame({"Feature": fts_remove})
-    fts_remove_out.to_csv(output_path + "/Features/Rd_ICC_FeatureNames.csv", index=False)
-    df_res.to_csv(output_path + "/Features/Rd_ICC_Values.csv", index=False)
+    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_ICC_Names.csv", index=False)
+    df_res.to_csv(output_path + "/Features/" + ContourType + "_ICC_Values.csv", index=False)
     print("ICC redudant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
     print("-" * 30)
 
@@ -86,7 +87,7 @@ def ICC(df_all, output_path, plot=False):
             plt.ylabel("ICC", fontsize=16)
             plt.ylim(0, 1.01)
             plt.yticks([0, 0.25, 0.5, 0.75, 1])
-            plt.savefig(output_path + "/Plots/ICC/" + ft + ".png", dpi=300)
+            plt.savefig(output_path + "/Plots/ICC/"+ ContourType + "_" +ft + ".png", dpi=300)
             plt.close()
         print("-" * 30)
 
@@ -111,6 +112,7 @@ def Volume(df_all, output_path, plot=False):
 
     features = df_all["Feature"].unique()
     fractions = df_all["Fraction"].unique()
+    ContourType = df_all["ContourType"].unique()[0]
 
     df_res = pd.DataFrame()
     print("Correlating features to volume...")
@@ -151,8 +153,8 @@ def Volume(df_all, output_path, plot=False):
     
     # save features to csv
     fts_remove_out = pd.DataFrame({"Feature": fts_remove})
-    fts_remove_out.to_csv(output_path + "/Features/Rd_VolCorr_FeatureNames.csv", index=False)
-    df_res.to_csv(output_path + "/Features/Rd_VolCorr_Values.csv", index=False)
+    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv", index=False)
+    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Values.csv", index=False)
     print("Volume redundant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
     print("-" * 30)
 
@@ -182,7 +184,7 @@ def Volume(df_all, output_path, plot=False):
             plt.yticks([0, 0.25, 0.5, 0.75, 1])
             plt.xlim(0.95, 5.05)
             plt.xticks([1, 2, 3, 4, 5])
-            plt.savefig(output_path + "/Plots/VolCorr/" + ft + ".png", dpi=300)
+            plt.savefig(output_path + "/Plots/VolCorr/" + ContourType + "_" + ft + ".png", dpi=300)
             plt.close()
         print("-" * 30)
 
@@ -192,11 +194,13 @@ def RemoveFts(df_all, output_path):
     """
     Remove features that have been identified as redundant.
     """
+    ContourType = df_all["ContourType"].unique()[0]
+
     print("-" * 30)
     print("Removing redundant features...")
-    fts_ICC = pd.read_csv(output_path + "/Features/Rd_ICC_FeatureNames.csv")
+    fts_ICC = pd.read_csv(output_path + "/Features/"+ ContourType + "_ICC_Names.csv")
     fts_ICC = fts_ICC["Feature"].values
-    fts_Vol = pd.read_csv(output_path + "/Features/Rd_VolCorr_FeatureNames.csv")
+    fts_Vol = pd.read_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv")
     fts_Vol = fts_Vol["Feature"].values
 
     fts_remove = np.concatenate((fts_ICC, fts_Vol))
