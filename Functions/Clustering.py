@@ -9,12 +9,13 @@ import statsmodels.tsa.stattools as sts
 from scipy import stats
 from Functions import UsefulFunctions as UF
 from scipy.spatial import distance
+from sklearn.preprocessing import MinMaxScaler 
 # from Features import Reduction as FR
 # from Features import Extraction as FE
 
 ####################################################
 
-def DistanceMatrix(df, outdir, plot=False):
+def DistanceMatrix(df, Rescale, outdir, plot=False):
     '''
     Calculates the Euclidean distance between feature pair trajectories
     for each patient.
@@ -39,6 +40,11 @@ def DistanceMatrix(df, outdir, plot=False):
         os.mkdir(outdir + "/DM/data/")
         os.mkdir(outdir + "/DM/figs/")
     
+    if Rescale == True:
+        print("Rescaling Features...")
+        df = RescaleFts(df)
+
+
     for pat in tqdm(PatIDs):
         df_pat = df[df["PatID"] == pat]
 
@@ -67,7 +73,7 @@ def DistanceMatrix(df, outdir, plot=False):
                     print(pat)
                     print(ft2, vals2)
                 
-                matrix[i,j] = distance.euclidean(vals1_ch, vals2_ch)
+                matrix[i,j] = distance.euclidean(vals1, vals2)
     
         df_dist = pd.DataFrame(matrix, columns=features, index=features)
         df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
@@ -86,7 +92,29 @@ def DistanceMatrix(df, outdir, plot=False):
 
 ####################################################
 
-def DistanceMatrix_Delta(df, outdir, plot=False):
+def RescaleFts(df):
+    '''
+    Rescale features to be between -1 and 1 across all patients
+    '''
+    
+    df = df.copy()
+
+    # Get the features
+    fts = df["Feature"].unique()
+    for ft in fts:
+        # Get the feature
+        df_ft = df.loc[df["Feature"] == ft]
+        # Get the values
+        vals = df_ft["FeatureValue"].values
+        vals = MinMaxScaler(feature_range=(-1,1)).fit_transform(vals.reshape(-1,1))
+        # Replace
+        df.loc[df["Feature"] == ft, "FeatureValue"] = vals
+
+    return df
+
+####################################################
+
+def DistanceMatrix_Delta(df, Rescale, outdir, plot=False):
     '''
     Calculates the Euclidean distance between feature pair trajectories
     for each patient.
@@ -110,6 +138,10 @@ def DistanceMatrix_Delta(df, outdir, plot=False):
         os.mkdir(outdir + "/DM/")
         os.mkdir(outdir + "/DM/data/")
         os.mkdir(outdir + "/DM/figs/")
+
+    if Rescale == True:
+        print("Rescaling Features...")
+        df = RescaleFts(df)
     
     for pat in tqdm(PatIDs):
         df_pat = df[df["PatID"] == pat]
@@ -408,7 +440,7 @@ def FeatureSelection(df, outdir):
 
     df_result = df_result.Feature.value_counts().rename_axis("Feature").reset_index(name="Counts")
     # get number of counts at 10th row
-    counts = df_result.iloc[10]["Counts"]
+    counts = df_result.iloc[9]["Counts"]
     #print(df_result)
     # get features with counts >= counts
     fts = df_result[df_result["Counts"] >= counts]["Feature"].values
