@@ -43,7 +43,8 @@ def DistanceMatrix(df, Rescale, outdir, plot=False):
     if Rescale == True:
         print("Rescaling Features...")
         df = RescaleFts(df)
-
+        vmin, vmax = 0, 5
+    
 
     for pat in tqdm(PatIDs):
         df_pat = df[df["PatID"] == pat]
@@ -78,9 +79,12 @@ def DistanceMatrix(df, Rescale, outdir, plot=False):
         df_dist = pd.DataFrame(matrix, columns=features, index=features)
         df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
 
+        if Rescale == False:
+            vmin, vmax = df_dist.min().min(), df_dist.max().max()
+        
         if plot == True:
             plt.figure(figsize=(10,10))
-            sns.heatmap(df_dist, cmap="viridis")
+            sns.heatmap(df_dist, cmap="viridis", vmin=vmin, vmax=vmax)
             plt.title(str(pat), fontsize=20)
             # make sure all ticks show
             plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
@@ -207,7 +211,7 @@ def ClusterCheck(df, fts, t_val, tries, df_DM):
 
 ####################################################
 
-def ClusterFeatures(df, outdir, s_t_val, plot=False):
+def ClusterFeatures(df, outdir, s_t_val, plot=True):
     '''
     Cluster features using distance matrix, 
     t_val is threshold for clustering, 
