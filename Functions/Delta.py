@@ -8,68 +8,69 @@ import pingouin as pg
 from scipy import stats
 import sys
 from Functions import UsefulFunctions as UF
-from Features import Extraction as FE
-from Features import Reduction as FR
+from sklearn.preprocessing import MinMaxScaler 
 
 ####################################################
 
-def CorrMatrix(root, Norm, tag):
-    # read in fts from csv
-    df_all = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Delta_All_fts_" + tag + ".csv")
-
-    fts_ICC = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Delta_FeaturesRemoved_ICC_" + tag + ".csv")
-    fts_ICC = fts_ICC["Feature"].unique()
-    fts_Vol = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Delta_FeaturesRemoved_Volume_" + tag + ".csv")
-    fts_Vol = fts_Vol["Feature"].unique()
-
-    df_all = df_all[~df_all["Feature"].isin(fts_ICC)]
-    df_all = df_all[~df_all["Feature"].isin(fts_Vol)]
+def CorrMatrix(df, Rescale, outdir, plot=False):
+    features = df["Feature"].unique()
     
-    fts = df_all["Feature"].unique()
-
     df_res = pd.DataFrame()
 
-    matrix = np.zeros((len(fts), len(fts)))
+    print("Calculating Delta Correlation pairs...")
 
-    # loop through all features
-    df_fr1 = df_all[df_all["Fraction"] != 1]
+    if os.path.isdir(outdir + "/CM/") == False:
+        os.mkdir(outdir + "/CM/")
 
-    for i, ft1 in tqdm(enumerate(fts)):
-        vals_ft1 = df_fr1[df_fr1["Feature"] == ft1]["FeatureChange"].values
-        for j, ft2 in enumerate(fts):
-            vals_ft2 = df_fr1[df_fr1["Feature"] == ft2]["FeatureChange"].values
-            rho = stats.spearmanr(vals_ft1, vals_ft2)[0]
+
+    if Rescale == True:
+        print("Rescaling Features...")
+        df = RescaleFts(df)
+
+    matrix = np.zeros((len(features), len(features)))
+
+
+    for i, ft1 in tqdm(enumerate(features)):
+        vals_ft1 = df[df["Feature"] == ft1]["FeatureValue"].values
+        for j, ft2 in enumerate(features):
+            vals_ft2 = df[df["Feature"] == ft2]["FeatureValue"].values
+            rho = stats.pearsonr(vals_ft1, vals_ft2)[0]
+
             matrix[i,j] = rho
 
-    df_res = pd.DataFrame(matrix, index=fts, columns=fts)
-    #print(df_res)
 
-    df_res.to_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Delta\\CorrMatrix_" + tag + ".csv")
+    df_res = pd.DataFrame(matrix, index=features, columns=features)
+    df_res.to_csv(outdir + "/CM/CorrMatrix.csv")
 
-    # plot heatmap
-    # plt.figure(figsize=(20,20))
-    # sns.heatmap(df_res, cmap="RdBu_r", vmin=-1, vmax=1, square=True)
-    # plt.savefig(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Delta\\CorrMatrix.png")
-    # plt.clf()
-
-    # show only values less than or equal to 0.5
-    # df_res = abs(df_res)
-    # df_res[df_res >= 0.5] = 0
-    # df_res.to_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Delta\\CorrMatrix_masked_" + tag + ".csv")
-    # plt.figure(figsize=(20,20))
-    # sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.5, square=True)
-    # plt.savefig(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Delta\\CorrMatrix_masked_" + tag + ".png")
-    # plt.clf()
-    # plt.close()
 
 ####################################################
 
-def FeatureSelection(root, Norm, tag, output=False):
+def RescaleFts(df):
+    '''
+    Rescale features to be between -1 and 1 across all patients
+    '''
+    
+    df = df.copy()
+
+    # Get the features
+    fts = df["Feature"].unique()
+    for ft in fts:
+        # Get the feature
+        df_ft = df.loc[df["Feature"] == ft]
+        # Get the values
+        vals = df_ft["FeatureValue"].values
+        vals = MinMaxScaler(feature_range=(0,1)).fit_transform(vals.reshape(-1,1))
+        # Replace
+        df.loc[df["Feature"] == ft, "FeatureValue"] = vals
+
+    return df
+
+####################################################
+
+def FeatureSelection(df, outdir):
     # read in fts from csv
-    df_corr = pd.read_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Delta\\CorrMatrix_" + tag + ".csv")
-
-    fts = df_corr["Unnamed: 0"].values
-
+    fts = df.index.values
+    df_corr = pd.read_csv(outdir + "CM\\CorrMatrix.csv")
     array_corr = df_corr.values[:,1:]
     array_corr = abs(array_corr)
 
@@ -124,7 +125,7 @@ def FeatureSelection(root, Norm, tag, output=False):
         fts = df_fts["Feature"].values
         for ft in fts:
             print(ft)
-    df_fts.to_csv(root + "Aaron\ProstateMRL\Data\Paper1\\" + Norm + "\\Features\\Delta_SelectedFeatures_" + tag + ".csv", index=False)
+    df_fts.to_csv(outdir + "Features\\Delta_SelectedFeatures.csv", index=False)
 
 ####################################################
 

@@ -110,7 +110,7 @@ def RescaleFts(df):
         df_ft = df.loc[df["Feature"] == ft]
         # Get the values
         vals = df_ft["FeatureValue"].values
-        vals = MinMaxScaler(feature_range=(-1,1)).fit_transform(vals.reshape(-1,1))
+        vals = MinMaxScaler(feature_range=(0,1)).fit_transform(vals.reshape(-1,1))
         # Replace
         df.loc[df["Feature"] == ft, "FeatureValue"] = vals
 
@@ -377,7 +377,9 @@ def ClusterCC(Cluster_ft_df):
 
             for u in vals:
                 ft_2 = vals[u]
-                corr = sts.ccf(ft_1, ft_2)[0] # cross correlation value, index [0] for for 0 lag in csc function
+                # calc pearson correlation
+                corr = stats.pearsonr(ft_1, ft_2)[0] # cross correlation value, index [0] for for 0 lag in csc function
+                # corr = sts.ccf(ft_1, ft_2)[0] # cross correlation value, index [0] for for 0 lag in csc function
                 ccfs_vals.append(corr)
             
             mean_ccfs[v] = np.array(ccfs_vals).mean() # get mean across all cc values for each ft
@@ -393,7 +395,7 @@ def ClusterCC(Cluster_ft_df):
 
 ####################################################
 
-def FeatureSelection(df, outdir):
+def FeatureSelection(df, Rescale, outdir):
     '''
     Loops through each patient  to select the 'best' feature for each cluster by performing cross-correlation
     Discards clusters with less than 3 features
@@ -408,6 +410,11 @@ def FeatureSelection(df, outdir):
     out_dir = outdir + "/Features/"
     
     df_result = pd.DataFrame()
+
+    if Rescale == True:
+        print("Rescaling Features...")
+        df = RescaleFts(df)
+        
     for pat in tqdm(patIDs):
         # read in feature vals and associated cluster labels
         df_pat_c = pd.read_csv(labels_dir + str(pat) + ".csv")
@@ -444,7 +451,9 @@ def FeatureSelection(df, outdir):
 
     df_result = df_result.Feature.value_counts().rename_axis("Feature").reset_index(name="Counts")
     # get number of counts at 10th row
-    counts = df_result.iloc[9]["Counts"]
+    
+    counts = df_result.iloc[8]["Counts"]
+    counts = 7
     #print(df_result)
     # get features with counts >= counts
     fts = df_result[df_result["Counts"] >= counts]["Feature"].values
@@ -455,8 +464,8 @@ def FeatureSelection(df, outdir):
     print("-" * 30)
     print("Number of Selected Features: {}".format(len(fts)))
     
-    df_result = df_result[df_result["Counts"] >= counts]
-
+    # df_result = df_result[df_result["Feature"].isin(fts)]
+    df_result = df_result[df_result["Counts"] >= 7]
     # drop counts
     df_result.to_csv(out_dir + "Features_Selected.csv")
     print("-" * 30)
