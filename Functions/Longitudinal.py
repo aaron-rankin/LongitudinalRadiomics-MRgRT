@@ -200,12 +200,12 @@ def ClusterCheck(df, fts, t_val, tries, df_DM):
         arr_DM_c = df_DM_c.to_numpy()
         
         # cluster
-        df_new["ClusterLabel"] = spch.fclusterdata(arr_DM_c, t=t_val, criterion="distance", method="ward")
+        df_new["ClusterLabel"] = spch.fclusterdata(arr_DM_c, t=t_val, criterion="distance", method="weighted")
         df_new["ClusterLabel"] = str(c*100) + str(tries) + df_new["ClusterLabel"].astype(str)
         df_new["ClusterLabel"] = df_new["ClusterLabel"].astype(int)
         df_new["ClusterNumFts"] = df_new.groupby("ClusterLabel")["ClusterLabel"].transform("count")
         number_fts = df_new["ClusterNumFts"].unique()
-        fts_check = df_new.loc[df_new["ClusterNumFts"] > 10]["Feature"].values
+        fts_check = df_new.loc[df_new["ClusterNumFts"] > 8]["Feature"].values
         #print(t_val, number_fts)#, df_new)
         return number_fts, df_new, fts_check
 
@@ -259,7 +259,7 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
                 df_c = df_labels[df_labels["ClusterLabel"] == c]
                 number_fts = len(df_c)
                 # check numnber of features in cluster
-                if number_fts > 10:
+                if number_fts > 8:
                         # if more than 10 features in cluster, reduce t_val and recluster
                         t_val = s_t_val - 0.2
                         check_fts = df_c.index.values
@@ -269,7 +269,7 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
                         df_labels.loc[new_fts, "ClusterLabel"] = df_labels2["ClusterLabel"].values
                         df_labels["ClusterNumFts"] = df_labels.groupby("ClusterLabel")["ClusterLabel"].transform("count")
 
-                        while number_fts.max() > 10:
+                        while number_fts.max() > 8:
                                 t_val = t_val - 0.2
                                 tries += 1
                                 #print("Cluster: {} Tries: {} T_val: {}".format(c, tries, t_val))
