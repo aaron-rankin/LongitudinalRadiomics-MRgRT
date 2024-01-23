@@ -452,8 +452,12 @@ def FeatureSelection(df, Rescale, outdir):
     df_result = df_result.Feature.value_counts().rename_axis("Feature").reset_index(name="Counts")
     # get number of counts at 10th row
     
-    counts = df_result.iloc[8]["Counts"]
-    counts = 7
+    #counts = df_result.iloc[8]["Counts"]
+    #counts = 7
+    # get length of df
+    #length = len(df_result)
+    # get top 20% of features
+    counts = df_result.iloc[int(len(df_result) * 0.2)]["Counts"]
     #print(df_result)
     # get features with counts >= counts
     fts = df_result[df_result["Counts"] >= counts]["Feature"].values
@@ -465,7 +469,7 @@ def FeatureSelection(df, Rescale, outdir):
     print("Number of Selected Features: {}".format(len(fts)))
     
     # df_result = df_result[df_result["Feature"].isin(fts)]
-    df_result = df_result[df_result["Counts"] >= 7]
+    df_result = df_result[df_result["Counts"] >= counts]
     # drop counts
     df_result.to_csv(out_dir + "Features_Selected.csv")
     print("-" * 30)
