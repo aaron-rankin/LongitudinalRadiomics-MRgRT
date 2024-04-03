@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 ####################################################
 
-def ICC(df_all, output_path, plot=False):
+def icc_calculation(df_all, output_path, plot=False):
     """
     Measure the stability of the feature values over all fractions by calculating the
     intraclass correlation coefficient (ICC) for each feature between manual and automatic contours 
@@ -91,9 +91,11 @@ def ICC(df_all, output_path, plot=False):
             plt.close()
         print("-" * 30)
 
+    return fts_remove
+
 ####################################################
 
-def Volume(df_all, output_path, plot=False):
+def volume_corr_tps(df_all, output_path, plot=False):
     """
     Correlate feature values over treatment with volume of manual prostate mask by 
     plotting a scatter plot and calculating the Spearman correlation coefficient over all fractions.
@@ -139,13 +141,12 @@ def Volume(df_all, output_path, plot=False):
     # get mean rho over all fractions
     df_mean = df_res.groupby("Feature").mean().reset_index()
     df_mean = df_mean.rename(columns={"rho": "rho_mean"})
-    df_mean.drop(["Fraction"], axis=1, inplace=True)
     df_mean = df_mean.sort_values(by="rho_mean", ascending=False)
 
     df_res = df_res.merge(df_mean, on="Feature", how="left")
     # sort by feature then fraction
     df_res = df_res.sort_values(by=["Feature", "Fraction"], ascending=True)
-    df_res["Remove"] = ["Yes" if x > 0.6 else "No" for x in df_res["rho_mean"]]
+    df_res["Remove"] = ["Yes" if x >= 0.6 else "No" for x in df_res["rho_mean"]]
     
     # if rho_mean > 0.6 find feature
     fts_remove = df_mean[df_mean["rho_mean"] > 0.6]["Feature"].values
@@ -187,24 +188,26 @@ def Volume(df_all, output_path, plot=False):
             plt.savefig(output_path + "/Plots/VolCorr/" + ContourType + "_" + ft + ".png", dpi=300)
             plt.close()
         print("-" * 30)
+    
+    return fts_remove
 
 ####################################################        
 
-def RemoveFts(df_all, output_path):
+def remove_fts(df_all, fts_remove, output_path):
     """
     Remove features that have been identified as redundant.
     """
-    ContourType = df_all["ContourType"].unique()[0]
+     # ContourType = df_all["ContourType"].unique()[0]
 
     print("-" * 30)
     print("Removing redundant features...")
-    fts_ICC = pd.read_csv(output_path + "/Features/"+ ContourType + "_ICC_Names.csv")
-    fts_ICC = fts_ICC["Feature"].values
-    fts_Vol = pd.read_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv")
-    fts_Vol = fts_Vol["Feature"].values
+    # fts_ICC = pd.read_csv(output_path + "/Features/"+ ContourType + "_ICC_Names.csv")
+    # fts_ICC = fts_ICC["Feature"].values
+    # fts_Vol = pd.read_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv")
+    # fts_Vol = fts_Vol["Feature"].values
 
-    fts_remove = np.concatenate((fts_ICC, fts_Vol))
-    fts_remove = np.unique(fts_remove)
+    # fts_remove = np.concatenate((fts_ICC, fts_Vol))
+    # fts_remove = np.unique(fts_remove)
     df_all = df_all[~df_all["Feature"].isin(fts_remove)]
     print("Number of features removed: " + str(len(fts_remove)))
     print("Number of features remaining: " + str(len(df_all["Feature"].unique())))

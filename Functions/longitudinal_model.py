@@ -7,7 +7,7 @@ from tqdm import tqdm
 import scipy.cluster.hierarchy as spch
 import statsmodels.tsa.stattools as sts
 from scipy import stats
-from Functions import UsefulFunctions as UF
+from Functions import useful_functions as uf
 from scipy.spatial import distance
 from sklearn.preprocessing import MinMaxScaler 
 # from Features import Reduction as FR
@@ -300,7 +300,7 @@ def ClusterCount(root, Norm, output, tag):
     Summarises clustering results
     '''
     dir = root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\" + Norm + "\\Longitudinal\\ClusterLabels\\"
-    patIDs = UF.SABRPats()
+    patIDs = uf.SABRPats()
     df_result = pd.DataFrame()
 
     for pat in patIDs:
@@ -588,7 +588,7 @@ def LongitudinalModel(DataRoot, Norm, Extract, t_val, tag, output=False):
     #print("------------------------------------")
     # print("Checking Directories...")
     print("Root: {} Norm: {}, Tag: {}".format(DataRoot, Norm, tag))
-    UF.CD(DataRoot, Extract, Norm, tag)
+    uf.CD(DataRoot, Extract, Norm, tag)
     
     print("------------------------------------\n")
     print("         Longitudinal Model         \n")

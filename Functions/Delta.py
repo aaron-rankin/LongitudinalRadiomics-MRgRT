@@ -7,7 +7,7 @@ from tqdm import tqdm
 import pingouin as pg
 from scipy import stats
 import sys
-from Functions import UsefulFunctions as UF
+from Functions import useful_functions as uf
 from sklearn.preprocessing import MinMaxScaler 
 
 ####################################################
@@ -134,7 +134,7 @@ def DeltaModel(DataRoot, Norm, tag, output=False):
     print("------------------------------------")
     print("------------------------------------")
     print("Root: {} Norm: {} Tag: {}".format(DataRoot, Norm, tag))
-    UF.CD(DataRoot, "No", Norm, tag)
+    uf.CD(DataRoot, "No", Norm, tag)
 
     print("------------------------------------\n")
     print("             Delta Model            \n")
