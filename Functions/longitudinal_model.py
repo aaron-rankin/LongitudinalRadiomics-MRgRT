@@ -9,13 +9,10 @@ import statsmodels.tsa.stattools as sts
 from scipy import stats
 from Functions import useful_functions as uf
 from scipy.spatial import distance
-from sklearn.preprocessing import MinMaxScaler 
-# from Features import Reduction as FR
-# from Features import Extraction as FE
 
 ####################################################
 
-def DistanceMatrix(df, Rescale, outdir, plot=False):
+def distance_matrices(df, outdir, plot=False):
     '''
     Calculates the Euclidean distance between feature pair trajectories
     for each patient.
@@ -40,12 +37,6 @@ def DistanceMatrix(df, Rescale, outdir, plot=False):
         os.mkdir(outdir + "/DM/data/")
         os.mkdir(outdir + "/DM/figs/")
     
-    if Rescale == True:
-        print("Rescaling Features...")
-        df = RescaleFts(df)
-        vmin, vmax = 0, 5
-    
-
     for pat in tqdm(PatIDs):
         df_pat = df[df["PatID"] == pat]
 
@@ -79,9 +70,6 @@ def DistanceMatrix(df, Rescale, outdir, plot=False):
         df_dist = pd.DataFrame(matrix, columns=features, index=features)
         df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
 
-        if Rescale == False:
-            vmin, vmax = df_dist.min().min(), df_dist.max().max()
-        
         if plot == True:
             plt.figure(figsize=(10,10))
             sns.heatmap(df_dist, cmap="viridis", vmin=vmin, vmax=vmax)
@@ -94,93 +82,93 @@ def DistanceMatrix(df, Rescale, outdir, plot=False):
             plt.savefig(outdir + "/DM/figs/" + str(pat) + ".png")
             plt.close()
 
-####################################################
+# ####################################################
 
-def RescaleFts(df):
-    '''
-    Rescale features to be between -1 and 1 across all patients
-    '''
+# def RescaleFts(df):
+#     '''
+#     Rescale features to be between -1 and 1 across all patients
+#     '''
     
-    df = df.copy()
+#     df = df.copy()
 
-    # Get the features
-    fts = df["Feature"].unique()
-    for ft in fts:
-        # Get the feature
-        df_ft = df.loc[df["Feature"] == ft]
-        # Get the values
-        vals = df_ft["FeatureValue"].values
-        vals = MinMaxScaler(feature_range=(0,1)).fit_transform(vals.reshape(-1,1))
-        # Replace
-        df.loc[df["Feature"] == ft, "FeatureValue"] = vals
+#     # Get the features
+#     fts = df["Feature"].unique()
+#     for ft in fts:
+#         # Get the feature
+#         df_ft = df.loc[df["Feature"] == ft]
+#         # Get the values
+#         vals = df_ft["FeatureValue"].values
+#         vals = MinMaxScaler(feature_range=(0,1)).fit_transform(vals.reshape(-1,1))
+#         # Replace
+#         df.loc[df["Feature"] == ft, "FeatureValue"] = vals
 
-    return df
+#     return df
 
-####################################################
+# ####################################################
 
-def DistanceMatrix_Delta(df, Rescale, outdir, plot=False):
-    '''
-    Calculates the Euclidean distance between feature pair trajectories
-    for each patient.
-    Saves the distance matrix for each patient to a csv file.
+# def DistanceMatrix_Delta(df, Rescale, outdir, plot=False):
+#     '''
+#     Calculates the Euclidean distance between feature pair trajectories
+#     for each patient.
+#     Saves the distance matrix for each patient to a csv file.
     
-    df: dataframe with all feature values across treatment for one region
-    out_dir: output
-    tag: tag for output to denote any changes
-    output: print output
-    plot: saves a heatmap of the distance matrix
-    '''
+#     df: dataframe with all feature values across treatment for one region
+#     out_dir: output
+#     tag: tag for output to denote any changes
+#     output: print output
+#     plot: saves a heatmap of the distance matrix
+#     '''
     
-    features = df["Feature"].unique()
-    PatIDs = df["PatID"].unique()
+#     features = df["Feature"].unique()
+#     PatIDs = df["PatID"].unique()
 
-    df_res = pd.DataFrame()
+#     df_res = pd.DataFrame()
 
-    print("Calculating Euclidean distance between feature pair trajectories...")
+#     print("Calculating Euclidean distance between feature pair trajectories...")
 
-    if os.path.isdir(outdir + "/DM/") == False:
-        os.mkdir(outdir + "/DM/")
-        os.mkdir(outdir + "/DM/data/")
-        os.mkdir(outdir + "/DM/figs/")
+#     if os.path.isdir(outdir + "/DM/") == False:
+#         os.mkdir(outdir + "/DM/")
+#         os.mkdir(outdir + "/DM/data/")
+#         os.mkdir(outdir + "/DM/figs/")
 
-    if Rescale == True:
-        print("Rescaling Features...")
-        df = RescaleFts(df)
+#     if Rescale == True:
+#         print("Rescaling Features...")
+#         df = RescaleFts(df)
     
-    for pat in tqdm(PatIDs):
-        df_pat = df[df["PatID"] == pat]
+#     for pat in tqdm(PatIDs):
+#         df_pat = df[df["PatID"] == pat]
 
-        matrix = np.zeros((len(features), len(features)))
+#         matrix = np.zeros((len(features), len(features)))
 
-        for i, ft1 in enumerate(features):
-            df_ft = df_pat[df_pat["Feature"] == ft1]
-            vals1 = df_ft["FeatureValue"].values
+#         for i, ft1 in enumerate(features):
+#             df_ft = df_pat[df_pat["Feature"] == ft1]
+#             vals1 = df_ft["FeatureValue"].values
 
-            for j, ft2 in enumerate(features):
-                df_ft2 = df_pat[df_pat["Feature"] == ft2]
-                vals2 = df_ft2["FeatureValue"].values
+#             for j, ft2 in enumerate(features):
+#                 df_ft2 = df_pat[df_pat["Feature"] == ft2]
+#                 vals2 = df_ft2["FeatureValue"].values
             
-                # get euclidean distance
+#                 # get euclidean distance
                 
-                matrix[i,j] = distance.euclidean(vals1, vals2)
+#                 matrix[i,j] = distance.euclidean(vals1, vals2)
     
-        df_dist = pd.DataFrame(matrix, columns=features, index=features)
-        df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
+#         df_dist = pd.DataFrame(matrix, columns=features, index=features)
+#         df_dist.to_csv(outdir + "/DM/data/" + str(pat) + ".csv")
 
-        if plot == True:
-            plt.figure(figsize=(10,10))
-            sns.heatmap(df_dist, cmap="viridis")
-            plt.title(str(pat), fontsize=20)
-            # make sure all ticks show
-            plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
-            plt.yticks(np.arange(len(features)) + 0.5, features, fontsize=6)
+#         if plot == True:
+#             plt.figure(figsize=(10,10))
+#             sns.heatmap(df_dist, cmap="viridis")
+#             plt.title(str(pat), fontsize=20)
+#             # make sure all ticks show
+#             plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
+#             plt.yticks(np.arange(len(features)) + 0.5, features, fontsize=6)
             
 
-            plt.savefig(outdir + "/DM/figs/" + str(pat) + ".png")
-            plt.close()
+#             plt.savefig(outdir + "/DM/figs/" + str(pat) + ".png")
+#             plt.close()
 
-####################################################
-def ClusterCheck(df, fts, t_val, tries, df_DM):
+# ####################################################
+def check_recluster(df, fts, t_val, tries, df_DM):
         '''
         If cluster has more than 10 features, re-cluster with smaller t_val
         '''
@@ -211,7 +199,7 @@ def ClusterCheck(df, fts, t_val, tries, df_DM):
 
 ####################################################
 
-def ClusterFeatures(df, outdir, s_t_val, plot=True):
+def cluster_features(df, outdir, s_t_val, method="weighted"):
     '''
     Cluster features using distance matrix, 
     t_val is threshold for clustering, 
@@ -234,8 +222,6 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
     patIDs = df["PatID"].unique()
     fts = df["Feature"].unique()
 
-    cluster_method = "weighted"
-
     for pat in tqdm(patIDs):
         df_DM = pd.read_csv(DM_dir + str(pat) + ".csv")
         df_DM.set_index("Unnamed: 0", inplace=True)
@@ -247,7 +233,7 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
         df_labels["Feature"] = fts
 
         # cluster function using DM, need to experiment with t_val and method
-        df_labels["ClusterLabel"] = spch.fclusterdata(arr_DM, t=s_t_val, criterion="distance", method=cluster_method)
+        df_labels["ClusterLabel"] = spch.fclusterdata(arr_DM, t=s_t_val, criterion="distance", method=method)
         df_labels.set_index("Feature", inplace=True)
         
         # check number of features in each cluster
@@ -264,7 +250,7 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
                         t_val = s_t_val - 0.2
                         check_fts = df_c.index.values
                         tries = 1
-                        number_fts, df_labels2, check_fts = ClusterCheck(df_c, check_fts, t_val, tries, df_DM)
+                        number_fts, df_labels2, check_fts = check_recluster(df_c, check_fts, t_val, tries, df_DM)
                         new_fts = df_labels2["Feature"].unique()
                         df_labels.loc[new_fts, "ClusterLabel"] = df_labels2["ClusterLabel"].values
                         df_labels["ClusterNumFts"] = df_labels.groupby("ClusterLabel")["ClusterLabel"].transform("count")
@@ -273,7 +259,7 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
                                 t_val = t_val - 0.2
                                 tries += 1
                                 #print("Cluster: {} Tries: {} T_val: {}".format(c, tries, t_val))
-                                number_fts, df_labels2, check_fts = ClusterCheck(df_c, check_fts, t_val, tries, df_DM)
+                                number_fts, df_labels2, check_fts = check_recluster(df_c, check_fts, t_val, tries, df_DM)
                                 new_fts = df_labels2["Feature"].unique()
                                 df_labels.loc[new_fts, "ClusterLabel"] = df_labels2["ClusterLabel"].values
                         
@@ -295,7 +281,7 @@ def ClusterFeatures(df, outdir, s_t_val, plot=True):
     print("-" *30)
 ####################################################
 
-def ClusterCount(root, Norm, output, tag):
+def count_clusters(root, Norm, output, tag):
     '''
     Summarises clustering results
     '''
@@ -351,7 +337,7 @@ def ClusterCount(root, Norm, output, tag):
 
 ####################################################
 
-def ClusterCC(Cluster_ft_df):
+def cluster_correlation(Cluster_ft_df):
     '''
     Input - df filtered for norm, patient, cluster
     Output - performs cross-correlation within clustered fts and returns ft most strongly correlated with the rest, if more than 2 fts present
@@ -395,7 +381,7 @@ def ClusterCC(Cluster_ft_df):
 
 ####################################################
 
-def FeatureSelection(df, Rescale, outdir):
+def select_features(df, outdir):
     '''
     Loops through each patient  to select the 'best' feature for each cluster by performing cross-correlation
     Discards clusters with less than 3 features
@@ -410,10 +396,6 @@ def FeatureSelection(df, Rescale, outdir):
     out_dir = outdir + "/Features/"
     
     df_result = pd.DataFrame()
-
-    if Rescale == True:
-        print("Rescaling Features...")
-        df = RescaleFts(df)
         
     for pat in tqdm(patIDs):
         # read in feature vals and associated cluster labels
@@ -433,7 +415,7 @@ def FeatureSelection(df, Rescale, outdir):
             # function loops through each cluster and gets feature values
             # performs cross-correlation and returns feature with highest mean correlation to all other features
             # returns NULL if < 3 features in cluster 
-            ft_selected = ClusterCC(df_cl_v)
+            ft_selected = cluster_correlation(df_cl_v)
 
             if ft_selected != 0:
                 for f in ft_selected:
@@ -452,12 +434,12 @@ def FeatureSelection(df, Rescale, outdir):
     df_result = df_result.Feature.value_counts().rename_axis("Feature").reset_index(name="Counts")
     # get number of counts at 10th row
     
-    #counts = df_result.iloc[8]["Counts"]
+    counts = df_result.iloc[9]["Counts"]
     #counts = 7
     # get length of df
     #length = len(df_result)
     # get top 20% of features
-    counts = df_result.iloc[int(len(df_result) * 0.2)]["Counts"]
+    # counts = df_result.iloc[int(len(df_result) * 0.1)]["Counts"]
     #print(df_result)
     # get features with counts >= counts
     fts = df_result[df_result["Counts"] >= counts]["Feature"].values
@@ -475,7 +457,7 @@ def FeatureSelection(df, Rescale, outdir):
     print("-" * 30)
 ####################################################
 
-def ClusterCC_Delta(Cluster_ft_df):
+def cluster_correlation_Delta(Cluster_ft_df):
     '''
     Input - df filtered for norm, patient, cluster
     Output - performs cross-correlation within clustered fts and returns ft most strongly correlated with the rest, if more than 2 fts present
@@ -511,7 +493,7 @@ def ClusterCC_Delta(Cluster_ft_df):
     return ft_selected
 
 ####################################################
-def FeatureSelection_Delta(df, outdir):
+def select_features_Delta(df, outdir):
     '''
     Loops through each patient  to select the 'best' feature for each cluster by performing cross-correlation
     Discards clusters with less than 3 features
@@ -544,7 +526,7 @@ def FeatureSelection_Delta(df, outdir):
             # function loops through each cluster and gets feature values
             # performs cross-correlation and returns feature with highest mean correlation to all other features
             # returns NULL if < 3 features in cluster 
-            ft_selected = ClusterCC_Delta(df_cl_v)
+            ft_selected = cluster_correlation_Delta(df_cl_v)
 
             if ft_selected != 0:
                 for f in ft_selected:
@@ -637,7 +619,7 @@ def LongitudinalModel(DataRoot, Norm, Extract, t_val, tag, output=False):
         print("Clustering Distance Matrices: ")
         print("------------------------------------")
     ClusterFeatures(DataRoot, Norm, t_val, tag)
-    #ClusterCount(DataRoot, Norm, output)
+    #count_clusters(DataRoot, Norm, output)
     if output == True:
         print("Feature Selection: ")
         print("------------------------------------")
@@ -660,7 +642,7 @@ def ModelCompact(DataRoot, Norm, t_val, tag, output=False):
     print("Clustering Distance Matrices: ")
     print("------------------------------------")
     ClusterFeatures(DataRoot, Norm, t_val, tag, output)
-    ClusterCount(DataRoot, Norm, tag, output)
+    count_clusters(DataRoot, Norm, tag, output)
     print("Feature Selection: ")
     print("------------------------------------")
     ClusterSelection(DataRoot, Norm, tag, output)

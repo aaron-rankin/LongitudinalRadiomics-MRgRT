@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import os
 from datetime import datetime
-import radiomics
-from radiomics import featureextractor
+#import radiomics
+#from radiomics import featureextractor
 import sys
 from tqdm import tqdm
 # import UsefulFunctions as UF

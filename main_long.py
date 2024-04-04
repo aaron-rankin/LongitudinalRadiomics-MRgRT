@@ -9,9 +9,6 @@ Feature selection done by clustering similar feature trajectories
 AGR 03/04/2024
 '''
 
-import os
-import pandas as pd
-from tqdm import tqdm
 from Functions import extraction as extr, reduction as red, longitudinal_model as lm
 
 
@@ -22,7 +19,7 @@ def main():
     Main function to run the pipeline
     '''
     tag = "Submission"
-    output_path = ext.create_output_dirs(tag)
+    output_path = extr.create_output_dirs(tag)
 
     print('-'*30)
     print('Getting feature data...')
@@ -46,7 +43,6 @@ def main():
     print('Auto Contours: ')
     _ = red.volume_corr_tps(df_auto, output_path)
 
-
     # ICC
     remove_fts_icc = red.icc_calculation(df_all, output_path)
 
@@ -58,14 +54,18 @@ def main():
     print('Feature selection...')
 
 
+    # Longitudinal model
+    print('Computing Euclidean distances:')
+    lm.distance_matrices(df_man, output_path)
 
+    lm.cluster_features(df_man, output_path, 1.5)
 
+    print('Selecting features:')
+    lm.select_features(df_man, output_path)
 
-
-
-
-    
-
+    print('-'*30)
+    print('Pipeline complete.')
+    print('-'*30)
     
 if __name__ == '__main__':
     main()
