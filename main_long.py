@@ -38,17 +38,22 @@ def main():
 
     # Volume correlation
     print('Manual Contours: ')
-    remove_fts_vol = red.volume_corr_tps(df_man, output_path)
+    remove_fts_vol_tp = red.volume_corr_tps(df_man, output_path)
+    remove_fts_vol_traj  = red.volume_trajectory(df_man, output_path)
     
     print('Auto Contours: ')
-    _ = red.volume_corr_tps(df_auto, output_path)
+    auto_vol_tp = red.volume_corr_tps(df_auto, output_path)
+    auto_vol_traj = red.volume_trajectory(df_auto, output_path)
 
     # ICC
     remove_fts_icc = red.icc_calculation(df_all, output_path)
 
     # Remove features
-    remove_fts_total = list(set(remove_fts_vol) | set(remove_fts_icc))
+    remove_fts_total = list(set(remove_fts_vol_tp) | set(remove_fts_vol_traj) | set(remove_fts_icc))
+    # remove_fts_total_auto = list(set(auto_vol_tp) | set(auto_vol_traj) | set(remove_fts_icc))
+    
     df_man = red.remove_fts(df_man, remove_fts_total, output_path)
+    # df_auto = red.remove_fts(df_auto, remove_fts_total_auto, output_path)
 
     print('-'*30)
     print('Feature selection...')
@@ -56,10 +61,10 @@ def main():
 
     # Longitudinal model
     print('Computing Euclidean distances:')
-    lm.distance_matrices(df_man, output_path)
+    lm.distance_matrices(df_man, output_path, plot=False)
 
     lm.cluster_features(df_man, output_path, 1.5)
-
+    lm.count_clusters(output_path)
     print('Selecting features:')
     lm.select_features(df_man, output_path)
 
@@ -68,5 +73,9 @@ def main():
     print('-'*30)
     
 if __name__ == '__main__':
-    main()
+    # main()
+    tag = "Submission"
+    output_path = extr.create_output_dirs(tag)
+    lm.count_clusters(output_path)
+    
 

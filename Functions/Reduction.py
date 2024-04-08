@@ -154,8 +154,8 @@ def volume_corr_tps(df_all, output_path, plot=False):
     
     # save features to csv
     fts_remove_out = pd.DataFrame({"Feature": fts_remove})
-    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv", index=False)
-    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Values.csv", index=False)
+    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_TP_Names.csv", index=False)
+    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_TP_Values.csv", index=False)
     print("Volume redundant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
     print("-" * 30)
 
@@ -190,6 +190,61 @@ def volume_corr_tps(df_all, output_path, plot=False):
         print("-" * 30)
     
     return fts_remove
+
+####################################################        
+
+def volume_trajectory(df_all, output_path, plot=False):
+    '''
+    Correlate feature trajectories with the volume of the mask over treatment
+    
+    '''
+    print("-" * 30)
+    print("Volume Correlation Trajectories")
+    df_vol = df_all[df_all["Feature"] == "shape_MeshVolume"]
+
+    features = df_all["Feature"].unique()
+    fractions = df_all["Fraction"].unique()
+    ContourType = df_all["ContourType"].unique()[0]
+    patIDs = df_all["PatID"].unique()
+
+    df_res = pd.DataFrame()
+    print("Correlating features to volume...")
+
+    for pat in tqdm(patIDs):
+        
+        df_pat = df_all[df_all["PatID"] == pat]
+        vals_vol = df_vol[df_vol["PatID"] == pat]['FeatureValue'].values
+
+        for ft in features:
+            vals_ft = df_pat[df_pat["Feature"] == ft]['FeatureValue'].values
+
+            rho = stats.pearsonr(vals_vol, vals_ft)[0]
+            df_temp = pd.DataFrame({"PatID": [pat], "Feature": [ft], "rho": [np.abs(rho)], })
+            df_res = df_res.append(df_temp)
+
+    df_mean_ft = df_res.groupby("Feature").mean().reset_index()
+    df_mean_ft = df_mean_ft.rename(columns={"rho": "rho_mean"})
+
+    df_mean_pat = df_res.groupby("PatID").mean().reset_index()
+    df_mean_pat = df_mean_pat.rename(columns={"rho": "rho_mean"})
+    
+    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_Values.csv", index=False)
+    df_mean_ft.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_MeanFt.csv", index=False)
+    df_mean_pat.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_MeanPat.csv", index=False)
+    print("-" * 30)
+
+
+# remove features with mean rho > 0.6 across all pats
+    fts_remove = df_mean_ft[df_mean_ft["rho_mean"] > 0.6]["Feature"].values
+
+    fts_remove_out = pd.DataFrame({"Feature": fts_remove})
+    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_Names.csv", index=False)
+
+    print("Volume trajectory redundant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
+    print("-" * 30)
+
+    return fts_remove
+
 
 ####################################################        
 

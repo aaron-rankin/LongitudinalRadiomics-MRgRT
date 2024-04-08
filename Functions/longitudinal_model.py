@@ -12,7 +12,7 @@ from scipy.spatial import distance
 
 ####################################################
 
-def distance_matrices(df, outdir, plot=False):
+def distance_matrices(df, outdir, plot=True):
     '''
     Calculates the Euclidean distance between feature pair trajectories
     for each patient.
@@ -72,13 +72,13 @@ def distance_matrices(df, outdir, plot=False):
 
         if plot == True:
             plt.figure(figsize=(10,10))
-            sns.heatmap(df_dist, cmap="viridis", vmin=vmin, vmax=vmax)
+            sns.heatmap(df_dist, cmap="viridis", vmin=0, vmax=2.5)
             plt.title(str(pat), fontsize=20)
             # make sure all ticks show
+
             plt.xticks(np.arange(len(features)) + 0.5, features, fontsize=6)
             plt.yticks(np.arange(len(features)) + 0.5, features, fontsize=6)
             
-
             plt.savefig(outdir + "/DM/figs/" + str(pat) + ".png")
             plt.close()
 
@@ -281,37 +281,36 @@ def cluster_features(df, outdir, s_t_val, method="weighted"):
     print("-" *30)
 ####################################################
 
-def count_clusters(root, Norm, output, tag):
+def count_clusters(outdir):
     '''
     Summarises clustering results
     '''
-    dir = root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\" + Norm + "\\Longitudinal\\ClusterLabels\\"
-    patIDs = uf.SABRPats()
+    outdir = outdir + "/Clustering/Labels/"
+    patIDs = os.listdir(outdir)
     df_result = pd.DataFrame()
 
     for pat in patIDs:
 
-        df = pd.read_csv(root + "\\Aaron\\ProstateMRL\\Data\\Paper1\\" + Norm + "\\Longitudinal\\ClusterLabels\\" + pat + "_" + tag + ".csv")
-        df = df[["Feature", "Cluster"]]
+        df = pd.read_csv(outdir + pat)
+        df = df[["Feature", "ClusterLabel"]]
         df = df.drop_duplicates()
         # sort by cluster
-        df = df.sort_values(by=["Cluster"])
+        df = df.sort_values(by=["ClusterLabel"])
         # turn value counts into a dataframe
-        df = df["Cluster"].value_counts().rename_axis("Cluster").reset_index(name="Counts")
+        df = df["ClusterLabel"].value_counts().rename_axis("ClusterLabel").reset_index(name="Counts")
         # set PatID as index
-        df["PatID"] = f[3:-4]
-        # set PatID as index
+        df["PatID"] = pat
         df.set_index("PatID", inplace=True)
             
         # append to result
         df_result = df_result.append(df, ignore_index=False)
     #get number of clusters with more than 3 features
     df_stable = df_result[df_result["Counts"] > 3]
-    df_stable = df_stable.groupby("PatID")["Cluster"].count()
+    df_stable = df_stable.groupby("PatID")["ClusterLabel"].count()
     # get mean number of stable clusters
     meanstable = df_stable.mean()
     #print(df_result)
-    df_numclust= df_result.groupby("PatID")["Cluster"].count()
+    df_numclust= df_result.groupby("PatID")["ClusterLabel"].count()
     #print(df_numclust)
     df_numclust = df_numclust.rename_axis("PatID").reset_index(name="NumClusters")
     #print(df_numclust)
@@ -330,10 +329,15 @@ def count_clusters(root, Norm, output, tag):
     df_numclust = pd.merge(df_numclust, df_numfts, on="PatID")
     df_numclust = pd.merge(df_numclust, df_medianfts, on="PatID")
 
-    if output == True:
-        print("Mean number of stable clusters per patient: ", meanstable)
-        print("Mean number of clusters per patient: ", df_numclust["NumClusters"].mean())
-        print("Mean features per cluster per patient: ", df_numfts["MeanFeaturesperCluster"].mean())
+
+    print("Mean number of stable clusters per patient: ", meanstable)
+    print("Mean number of clusters per patient: ", df_numclust["NumClusters"].mean())
+    print("Mean features per cluster per patient: ", df_numfts["MeanFeaturesperCluster"].mean())
+    print("Std features per cluster per patient: ", df_numfts["MeanFeaturesperCluster"].std())
+
+    print("Range of clusters: ", df_numclust["NumClusters"].min(), df_numclust["NumClusters"].max())
+    print("Std of clusters: ", df_numclust["NumClusters"].std())
+    print("Range of features per cluster: ", df_numfts["MeanFeaturesperCluster"].min(), df_numfts["MeanFeaturesperCluster"].max())
 
 ####################################################
 
