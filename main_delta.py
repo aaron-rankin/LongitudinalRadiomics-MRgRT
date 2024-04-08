@@ -49,10 +49,7 @@ def main():
     print('Feature selection...')
 
     df_corr = dm.correlation_matrix(df_man, output_path, plot=False)
-    plt.figure(figsize=(10, 10))
-    sns.heatmap(df_corr)
-    plt.show()
-    # dm.feature_selection(df_corr, output_path)
+    dm.feature_selection(df_corr, output_path)
 
     print('Delta Pipeline Complete')
 

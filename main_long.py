@@ -62,20 +62,16 @@ def main():
     # Longitudinal model
     print('Computing Euclidean distances:')
     lm.distance_matrices(df_man, output_path, plot=False)
-
+    
     lm.cluster_features(df_man, output_path, 1.5)
-    lm.count_clusters(output_path)
+    
     print('Selecting features:')
+    
     lm.select_features(df_man, output_path)
-
+    lm.count_clusters(output_path)
     print('-'*30)
     print('Pipeline complete.')
     print('-'*30)
     
 if __name__ == '__main__':
-    # main()
-    tag = "Submission"
-    output_path = extr.create_output_dirs(tag)
-    lm.count_clusters(output_path)
-    
-
+    main()

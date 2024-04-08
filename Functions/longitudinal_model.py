@@ -339,6 +339,20 @@ def count_clusters(outdir):
     print("Std of clusters: ", df_numclust["NumClusters"].std())
     print("Range of features per cluster: ", df_numfts["MeanFeaturesperCluster"].min(), df_numfts["MeanFeaturesperCluster"].max())
 
+    # output to txt file:
+    outfile = outdir.split("Labels")[0] + "ClusterSummary.txt"
+    with open(outfile, "w") as f:
+        f.write("Mean number of stable clusters per patient: {}\n".format(meanstable))
+        f.write("Mean number of clusters per patient: {}\n".format(df_numclust["NumClusters"].mean()))
+        f.write("Mean features per cluster per patient: {}\n".format(df_numfts["MeanFeaturesperCluster"].mean()))
+        f.write("Std features per cluster per patient: {}\n".format(df_numfts["MeanFeaturesperCluster"].std()))
+        f.write("Range of clusters: {} {}\n".format(df_numclust["NumClusters"].min(), df_numclust["NumClusters"].max()))
+        f.write("Std of clusters: {}\n".format(df_numclust["NumClusters"].std()))
+        f.write("Range of features per cluster: {} {}\n".format(df_numfts["MeanFeaturesperCluster"].min(), df_numfts["MeanFeaturesperCluster"].max()))
+    
+    f.close()
+
+    # output to csv
 ####################################################
 
 def cluster_correlation(Cluster_ft_df):
