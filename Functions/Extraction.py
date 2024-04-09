@@ -72,6 +72,10 @@ def get_df_all(output_path):
         
         return df_all
     
+    elif os.path.exists(f'Output/Submission/features/features_all.csv'):
+        df_all = pd.read_csv(f'Output/Submission/features/features_all.csv')
+        
+        return df_all
     else:
         print('Error loading features!')
 

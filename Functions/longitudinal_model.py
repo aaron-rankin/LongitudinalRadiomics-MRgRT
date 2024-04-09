@@ -349,8 +349,7 @@ def count_clusters(outdir):
         f.write("Range of clusters: {} {}\n".format(df_numclust["NumClusters"].min(), df_numclust["NumClusters"].max()))
         f.write("Std of clusters: {}\n".format(df_numclust["NumClusters"].std()))
         f.write("Range of features per cluster: {} {}\n".format(df_numfts["MeanFeaturesperCluster"].min(), df_numfts["MeanFeaturesperCluster"].max()))
-    
-    f.close()
+        f.close()
 
     # output to csv
 ####################################################
