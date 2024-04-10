@@ -49,8 +49,9 @@ def main():
     print('Feature selection...')
 
     df_corr = dm.correlation_matrix(df_man, output_path, plot=False)
-    dm.FeatureSelection3(df_man, output_path)
-    
+    # fts_selected = dm.remove_highly_correlated_features(df_corr)
+    dm.feature_selection(df_corr, output_path)
+    # fts_corr = dm.find_correlation(df_corr, cutoff=0.8, verbose=True, names=True)
     print('-'*30)
     print('Delta Pipeline Complete')
     print('-'*30)

@@ -68,34 +68,23 @@ def feature_selection(df_corr, outdir):
     results = np.zeros((len(features), len(features)))
     selected_features = []
 
-
-
-    for i in tqdm(range(len(features) - 1)):
-        for j in range(len(features) - 1):
-            if array_corr[i,j] <= 0.75:
+    for i in tqdm(range(len(features)-1)):
+        for j in range(len(features)-1):
+            if array_corr[i,j] > 0.8:
                 results[i,j] = array_corr[i,j]
                 selected_features.append([features[i], features[j]])
             else:
-                results[i,j] = 1
+                results[i,j] = array_corr[i,j]
 
     df_res = pd.DataFrame(results, columns=features, index=features)
-    # plt.figure(figsize=(20,20))
-    
-    # print('selected_features: ', selected_features)
-
-
-    # # loop through correlation matrix
-    # for i in tqdm(range(len(features))):
-    #     for j in range(len(features)):
-    #         # select features with correlation less than 0.6
-    #         if array_corr[i,j] <= 0.8:
-    #             results[i,j] = array_corr[i,j]
-    #             selected_features.append([features[i], features[j]])
-    #         else:
-    #             results[i,j] = 1
     
     # # create a dataframe to store the results
-    # df_res = pd.DataFrame(results, columns=features, index=features)
+    df_res = pd.DataFrame(results, columns=features, index=features)
+    # heatmap of results
+    plt.figure(figsize=(20,20))
+    sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.8, square=True)
+    plt.savefig(outdir + "/CM/CorrMatrix-PreSelection.png")
+    plt.close()
 
     # loop through results with ft pairs and select ft with lowest mean value
     # create an empty array to store the results
@@ -138,6 +127,8 @@ def feature_selection(df_corr, outdir):
     print("-" * 30)
     print("Number of Selected Features: {}".format(len(features_keep2)))
     print("-"*30)
+
+    return None
 
 ####################################################
 
@@ -245,6 +236,69 @@ def FeatureSelection2(df, outdir):
         print(ft)
     df_fts.to_csv(outdir + "features\\Features_Selected.csv", index=False)
 
+####################################################
+
+def remove_highly_correlated_features(correlation_matrix, threshold=0.6):
+    """
+    Remove one of each highly correlated feature pair based on the average absolute correlation coefficient.
+    
+    Parameters:
+    - features: List or array containing feature names.
+    - correlation_matrix: 2D array or DataFrame containing correlation coefficients between features.
+    - threshold: Threshold value for considering features as highly correlated (default: 0.8).
+    
+    Returns:
+    - List of selected features after removing highly correlated features.
+    """
+    # Create a mask to exclude upper triangle of the correlation matrix
+    mask = np.triu(np.ones_like(correlation_matrix, dtype=bool), k=1)
+    features = correlation_matrix.columns
+
+    mask = correlation_matrix.mask(np.triu(pd.DataFrame(True, index=correlation_matrix.index, columns=correlation_matrix.columns), k=1))
+    
+    # Initialize list to store indices of features to remove
+    features_to_remove = []
+    features_to_keep = [] 
+    
+    # Iterate over each pair of features
+    for i in range(len(features)):
+        for j in range(i+1, len(features)):
+            if mask.iloc[i, j]:  # Check if the pair has not been processed yet
+                correlation_coefficient = correlation_matrix.iloc[i, j]
+                
+                # If correlation coefficient is above the threshold
+                if abs(correlation_coefficient) >= threshold:
+                    # Determine which feature to remove based on average absolute correlation coefficient
+                    avg_corr_i = correlation_matrix.iloc[i, :].abs().mean()
+                    avg_corr_j = correlation_matrix.iloc[j, :].abs().mean()
+                    
+                    # Remove the feature with larger average absolute correlation coefficient
+                    if avg_corr_i > avg_corr_j:
+                        features_to_remove.append(features[j])
+                        
+                        if features[i] not in features_to_keep:
+                            features_to_keep.append(features[i])
+
+                    else:
+                        features_to_remove.append(features[i])
+                        
+                        if features[j] not in features_to_keep:
+                            features_to_keep.append(features[j])
+
+    # Selected features are what remain after removing highly correlated features
+    #selected_features = [feat for idx, feat in enumerate(features) if idx not in features_to_remove]
+    
+    selected_features = features_to_keep
+    
+    # if in fts to remove, remove from selected fts
+    selected_features = [x for x in selected_features if x not in features_to_remove]
+
+    print("Selected Features: ({})".format(str(len(selected_features))))
+    df_features = pd.DataFrame(selected_features, columns=["Feature"])
+    
+    for ft in selected_features:
+            print(ft)
+    return selected_features
 
 ####################################################
 def FeatureSelection(df, outdir):
@@ -455,3 +509,57 @@ def FeatureSelection3(df, outdir):
 #     print("------------------------------------\n ")
 
 # ####################################################
+
+def find_correlation(x, cutoff=0.8, verbose=True, names=True, exact=None):
+    """
+    Find correlated variables based on a correlation matrix.
+
+    Args:
+        x (numpy.ndarray): A correlation matrix.
+        cutoff (float): A numeric value for the pair-wise absolute correlation cutoff.
+        verbose (bool): A boolean for printing the details.
+        names (bool): A boolean indicating whether to return column names (True) or indices (False).
+        exact (bool): A boolean indicating whether to recompute average correlations at each step.
+
+    Returns:
+        numpy.ndarray: A vector of indices denoting the columns to remove (when names = False)
+        otherwise a vector of column names. If no correlations meet the criteria, an empty array is returned.
+    """
+
+    cor_matrix = x.values
+
+    # if isinstance(x, pd.DataFrame):
+    #     cor_matrix = np.abs(x.values)
+    # elif isinstance(x, np.ndarray):
+    #     cor_matrix = np.abs(x)
+    # else:
+    #     raise ValueError("Input must be a pandas DataFrame or a numpy array.")
+
+    if exact is None:
+        exact = x.shape[1] < 100
+
+
+    cor_matrix = np.abs(cor_matrix)
+    np.fill_diagonal(cor_matrix, 0)
+
+    avg_cor = cor_matrix.mean(axis=0)
+
+    while True:
+        max_cor_idx = np.argmax(avg_cor)
+        max_cor_val = avg_cor[max_cor_idx]
+
+        if max_cor_val < cutoff:
+            break
+
+        if verbose:
+            print(f"Removing column {max_cor_idx}, mean correlation: {max_cor_val}")
+
+        cor_matrix = np.delete(np.delete(cor_matrix, max_cor_idx, axis=0), max_cor_idx, axis=1)
+        avg_cor = cor_matrix.mean(axis=0)
+
+    correlated_indices = np.where(avg_cor >= cutoff)[0]
+
+    if names:
+        return correlated_indices
+    else:
+        return correlated_indices.tolist()
