@@ -11,6 +11,7 @@ AGR 03/04/2024
 
 from Functions import extraction as extr, reduction as red, longitudinal_model as lm
 import numpy as np
+import os
 
 EXTRACT = False
 
@@ -38,6 +39,7 @@ def main():
         df_all = extr.format_df_all(df_all, rescale=True, output_path=output_path)
 
         df_man, df_auto = extr.split_df_all(df_all)
+        df_man.to_csv(os.path.join(output_path, 'features_rescaled.csv'), index=False)
 
         print('-'*30)
         print('Feature reduction...')

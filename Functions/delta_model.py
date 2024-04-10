@@ -59,7 +59,6 @@ def feature_selection(df_corr, outdir):
     array_corr = df_corr.values[:,1:]
     
     print("Selecting Features...")
-    print(len(features))
     results = np.zeros((len(features), len(features)))
     selected_features = []
 
@@ -69,13 +68,11 @@ def feature_selection(df_corr, outdir):
     results = np.zeros((len(features), len(features)))
     selected_features = []
 
-    print('array_corr.shape: ', array_corr.shape)
-    print('results.shape: ', results.shape)
 
 
     for i in tqdm(range(len(features) - 1)):
         for j in range(len(features) - 1):
-            if array_corr[i,j] <= 0.8:
+            if array_corr[i,j] <= 0.75:
                 results[i,j] = array_corr[i,j]
                 selected_features.append([features[i], features[j]])
             else:
@@ -84,8 +81,7 @@ def feature_selection(df_corr, outdir):
     df_res = pd.DataFrame(results, columns=features, index=features)
     # plt.figure(figsize=(20,20))
     
-    print('selected_features: ', selected_features)
-    print(df_corr.columns)
+    # print('selected_features: ', selected_features)
 
 
     # # loop through correlation matrix
@@ -117,7 +113,7 @@ def feature_selection(df_corr, outdir):
         mean_ft2 = float(df_ft2.mean(axis=1))
 
         # compare mean values
-        if mean_ft1 > mean_ft2:
+        if mean_ft1 < mean_ft2:
             features_keep.append(selected_features[i][0])
             features_remove.append(selected_features[i][1])
         else:
@@ -178,6 +174,79 @@ def CorrMatrix(df, Rescale, outdir, plot=False):
 
 ####################################################
 
+def FeatureSelection2(df, outdir):
+    # read in fts from csv
+
+    df_corr = pd.read_csv(outdir + "CM\\CorrMatrix.csv")
+    fts = df['Feature'].unique()
+    array_corr = df_corr.values[:,1:]
+    array_corr = abs(array_corr)
+
+    results = np.zeros((len(fts), len(fts)))
+    selected_fts = []
+
+    for i in tqdm(range(len(fts))):
+        for j in range(len(fts)):
+            
+            if array_corr[i,j] <= 0.8:
+                results[i,j] = array_corr[i,j]
+                selected_fts.append([fts[i], fts[j]])
+            else:
+                results[i,j] = 1
+
+    df_res = pd.DataFrame(results, columns=fts, index=fts)
+    # plt.figure(figsize=(20,20))
+    # sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.5, square=False)
+    # plt.show()
+
+    # loop through results with ft pairs and select ft with lowest mean value
+    # create an empty array to store the results
+
+    # heatmap of results
+    plt.figure(figsize=(20,20))
+    sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.8, square=False)
+    #plt.show()
+
+    fts_keep = []
+    fts_remove = []
+     
+    for i in range(len(selected_fts)):
+        # select ft pair
+        df_ft1 = df_corr[df_corr["Unnamed: 0"] == selected_fts[i][0]]
+        df_ft2 = df_corr[df_corr["Unnamed: 0"] == selected_fts[i][1]]
+        # get mean values across row
+        mean_ft1 = float(df_ft1.mean(axis=1))
+        mean_ft2 = float(df_ft2.mean(axis=1))
+
+        # # compare mean values
+        # if mean_ft1 > mean_ft2:
+        #     fts_keep.append(selected_fts[i][0])
+        #     fts_remove.append(selected_fts[i][1])
+        # else:
+        #     fts_keep.append(selected_fts[i][1])
+        #     fts_remove.append(selected_fts[i][0])
+        
+
+
+
+    # remove duplicates
+    fts_keep = list(dict.fromkeys(fts_keep))
+    fts_remove = list(dict.fromkeys(fts_remove))
+
+    # compare lists
+    fts_keep2 = [x for x in fts_keep if x not in fts_remove]
+
+    # save results
+    df_fts = pd.DataFrame(fts_keep2, columns=["Feature"])
+    print('-'*30)
+    print("Selected Features: ({})".format(str(len(fts_keep2))))
+    fts = df_fts["Feature"].values
+    for ft in fts:
+        print(ft)
+    df_fts.to_csv(outdir + "features\\Features_Selected.csv", index=False)
+
+
+####################################################
 def FeatureSelection(df, outdir):
     # read in features from csv
     features = df.index.values
@@ -240,8 +309,106 @@ def FeatureSelection(df, outdir):
 
 # ####################################################
 
-# def DeltaModel(DataRoot, Norm, tag, output=False):
-#     # Make Directories if they don't exist
+def FeatureSelection3(df, outdir):
+    # read in fts from csv
+
+    df_corr = pd.read_csv(outdir + "CM\\CorrMatrix.csv")
+    fts = df['Feature'].unique()
+    array_corr = df_corr.values[:,1:]
+    print(array_corr)
+
+    array_corr = abs(array_corr)
+
+    results = np.zeros((len(fts), len(fts)))
+    mask = np.triu(np.ones_like(results, dtype=bool), k=1)
+    selected_fts = []
+
+    threshold = 0.8
+
+    for i in range(len(fts)):
+        for j in range(i+1, len(fts)):
+            if mask[i, j]:
+                corr_coeff = array_corr[i, j]
+
+                if corr_coeff > threshold:
+                    mean_corr_i = np.mean(array_corr[i, :])
+                    mean_corr_j = np.mean(array_corr[j, :])
+
+                    if mean_corr_i < mean_corr_j:
+                        selected_fts.append(fts[i])
+                        np.delete(array_corr, i, axis=0)
+                        np.delete(array_corr, i, axis=1)
+                    else:
+                        np.delete(array_corr, j, axis=0)
+                        np.delete(array_corr, j, axis=1)
+                        selected_fts.append(fts[j])
+    # selected features are what remain
+    print(selected_fts)
+
+    
+    
+    
+#     for i in tqdm(range(len(fts))):
+#         for j in range(len(fts)):
+            
+#             if array_corr[i,j] <= 0.8:
+#                 results[i,j] = array_corr[i,j]
+#                 selected_fts.append([fts[i], fts[j]])
+#             else:
+#                 results[i,j] = 1
+
+#     df_res = pd.DataFrame(results, columns=fts, index=fts)
+#     # plt.figure(figsize=(20,20))
+#     # sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.5, square=False)
+#     # plt.show()
+
+#     # loop through results with ft pairs and select ft with lowest mean value
+#     # create an empty array to store the results
+    
+#     # heatmap of results
+#     plt.figure(figsize=(20,20))
+#     sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.8, square=False)
+#     #plt.show()
+
+#     fts_keep = []
+#     fts_remove = []
+     
+#     for i in range(len(selected_fts)):
+#         # select ft pair
+#         df_ft1 = df_corr[df_corr["Unnamed: 0"] == selected_fts[i][0]]
+#         df_ft2 = df_corr[df_corr["Unnamed: 0"] == selected_fts[i][1]]
+#         # get mean values across row
+#         mean_ft1 = float(df_ft1.mean(axis=1))
+#         mean_ft2 = float(df_ft2.mean(axis=1))
+
+#         # # compare mean values
+#         # if mean_ft1 > mean_ft2:
+#         #     fts_keep.append(selected_fts[i][0])
+#         #     fts_remove.append(selected_fts[i][1])
+#         # else:
+#         #     fts_keep.append(selected_fts[i][1])
+#         #     fts_remove.append(selected_fts[i][0])
+        
+
+
+
+#     # remove duplicates
+#     fts_keep = list(dict.fromkeys(fts_keep))
+#     fts_remove = list(dict.fromkeys(fts_remove))
+
+#     # compare lists
+#     fts_keep2 = [x for x in fts_keep if x not in fts_remove]
+
+#     # save results
+#     df_fts = pd.DataFrame(fts_keep2, columns=["Feature"])
+#     print('-'*30)
+#     print("Selected Features: ({})".format(str(len(fts_keep2))))
+#     fts = df_fts["Feature"].values
+#     for ft in fts:
+#         print(ft)
+#     df_fts.to_csv(outdir + "features\\Features_Selected.csv", index=False)
+# # def DeltaModel(DataRoot, Norm, tag, output=False):
+# #     # Make Directories if they don't exist
 #     print("------------------------------------")
 #     print("------------------------------------")
 #     print("Root: {} Norm: {} Tag: {}".format(DataRoot, Norm, tag))

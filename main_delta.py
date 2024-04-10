@@ -49,9 +49,12 @@ def main():
     print('Feature selection...')
 
     df_corr = dm.correlation_matrix(df_man, output_path, plot=False)
-    dm.feature_selection(df_corr, output_path)
-
+    dm.FeatureSelection3(df_man, output_path)
+    
+    print('-'*30)
     print('Delta Pipeline Complete')
+    print('-'*30)
+    
 
 if __name__ == '__main__':
     main()

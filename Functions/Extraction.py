@@ -189,7 +189,7 @@ def calc_delta(df_pat):
     df_pat = df_pat.reset_index()
     
     # calculate delta
-    df_pat['Delta'] = (df_pat[1] - df_pat[5]) 
+    df_pat['Delta'] = (df_pat[1] - df_pat[5]) / df_pat[1]
 
     df_pat.drop(columns=[1, 5], inplace=True)
     df_pat.rename(columns={'Delta': 'FeatureValue'}, inplace=True)
