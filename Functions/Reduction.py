@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 ####################################################
 
-def ICC(df_all, output_path, plot=False):
+def icc_calculation(df_all, output_path, plot=False):
     """
     Measure the stability of the feature values over all fractions by calculating the
     intraclass correlation coefficient (ICC) for each feature between manual and automatic contours 
@@ -91,9 +91,11 @@ def ICC(df_all, output_path, plot=False):
             plt.close()
         print("-" * 30)
 
+    return fts_remove
+
 ####################################################
 
-def Volume(df_all, output_path, plot=False):
+def volume_corr_tps(df_all, output_path, plot=False):
     """
     Correlate feature values over treatment with volume of manual prostate mask by 
     plotting a scatter plot and calculating the Spearman correlation coefficient over all fractions.
@@ -139,13 +141,12 @@ def Volume(df_all, output_path, plot=False):
     # get mean rho over all fractions
     df_mean = df_res.groupby("Feature").mean().reset_index()
     df_mean = df_mean.rename(columns={"rho": "rho_mean"})
-    df_mean.drop(["Fraction"], axis=1, inplace=True)
     df_mean = df_mean.sort_values(by="rho_mean", ascending=False)
 
     df_res = df_res.merge(df_mean, on="Feature", how="left")
     # sort by feature then fraction
     df_res = df_res.sort_values(by=["Feature", "Fraction"], ascending=True)
-    df_res["Remove"] = ["Yes" if x > 0.6 else "No" for x in df_res["rho_mean"]]
+    df_res["Remove"] = ["Yes" if x >= 0.6 else "No" for x in df_res["rho_mean"]]
     
     # if rho_mean > 0.6 find feature
     fts_remove = df_mean[df_mean["rho_mean"] > 0.6]["Feature"].values
@@ -153,8 +154,8 @@ def Volume(df_all, output_path, plot=False):
     
     # save features to csv
     fts_remove_out = pd.DataFrame({"Feature": fts_remove})
-    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv", index=False)
-    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Values.csv", index=False)
+    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_TP_Names.csv", index=False)
+    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_TP_Values.csv", index=False)
     print("Volume redundant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
     print("-" * 30)
 
@@ -187,24 +188,81 @@ def Volume(df_all, output_path, plot=False):
             plt.savefig(output_path + "/Plots/VolCorr/" + ContourType + "_" + ft + ".png", dpi=300)
             plt.close()
         print("-" * 30)
+    
+    return fts_remove
 
 ####################################################        
 
-def RemoveFts(df_all, output_path):
+def volume_trajectory(df_all, output_path, plot=False):
+    '''
+    Correlate feature trajectories with the volume of the mask over treatment
+    
+    '''
+    print("-" * 30)
+    print("Volume Correlation Trajectories")
+    df_vol = df_all[df_all["Feature"] == "shape_MeshVolume"]
+
+    features = df_all["Feature"].unique()
+    fractions = df_all["Fraction"].unique()
+    ContourType = df_all["ContourType"].unique()[0]
+    patIDs = df_all["PatID"].unique()
+
+    df_res = pd.DataFrame()
+    print("Correlating features to volume...")
+
+    for pat in tqdm(patIDs):
+        
+        df_pat = df_all[df_all["PatID"] == pat]
+        vals_vol = df_vol[df_vol["PatID"] == pat]['FeatureValue'].values
+
+        for ft in features:
+            vals_ft = df_pat[df_pat["Feature"] == ft]['FeatureValue'].values
+
+            rho = stats.pearsonr(vals_vol, vals_ft)[0]
+            df_temp = pd.DataFrame({"PatID": [pat], "Feature": [ft], "rho": [np.abs(rho)], })
+            df_res = df_res.append(df_temp)
+
+    df_mean_ft = df_res.groupby("Feature").mean().reset_index()
+    df_mean_ft = df_mean_ft.rename(columns={"rho": "rho_mean"})
+
+    df_mean_pat = df_res.groupby("PatID").mean().reset_index()
+    df_mean_pat = df_mean_pat.rename(columns={"rho": "rho_mean"})
+    
+    df_res.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_Values.csv", index=False)
+    df_mean_ft.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_MeanFt.csv", index=False)
+    df_mean_pat.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_MeanPat.csv", index=False)
+    print("-" * 30)
+
+
+# remove features with mean rho > 0.6 across all pats
+    fts_remove = df_mean_ft[df_mean_ft["rho_mean"] > 0.6]["Feature"].values
+
+    fts_remove_out = pd.DataFrame({"Feature": fts_remove})
+    fts_remove_out.to_csv(output_path + "/Features/" + ContourType + "_VolCorr_Traj_Names.csv", index=False)
+
+    print("Volume trajectory redundant features: " + str(len(fts_remove)) + "/" + str(len(features)) )
+    print("-" * 30)
+
+    return fts_remove
+
+
+####################################################        
+
+def remove_fts(df_all, fts_remove, output_path):
     """
     Remove features that have been identified as redundant.
     """
-    ContourType = df_all["ContourType"].unique()[0]
+     # ContourType = df_all["ContourType"].unique()[0]
 
     print("-" * 30)
     print("Removing redundant features...")
-    fts_ICC = pd.read_csv(output_path + "/Features/"+ ContourType + "_ICC_Names.csv")
-    fts_ICC = fts_ICC["Feature"].values
-    fts_Vol = pd.read_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv")
-    fts_Vol = fts_Vol["Feature"].values
+    # fts_ICC = pd.read_csv(output_path + "/Features/"+ ContourType + "_ICC_Names.csv")
+    # fts_ICC = fts_ICC["Feature"].values
+    # fts_Vol = pd.read_csv(output_path + "/Features/" + ContourType + "_VolCorr_Names.csv")
+    # fts_Vol = fts_Vol["Feature"].values
 
-    fts_remove = np.concatenate((fts_ICC, fts_Vol))
-    fts_remove = np.unique(fts_remove)
+    # fts_remove = np.concatenate((fts_ICC, fts_Vol))
+    # fts_remove = np.unique(fts_remove)
     df_all = df_all[~df_all["Feature"].isin(fts_remove)]
     print("Number of features removed: " + str(len(fts_remove)))
     print("Number of features remaining: " + str(len(df_all["Feature"].unique())))
