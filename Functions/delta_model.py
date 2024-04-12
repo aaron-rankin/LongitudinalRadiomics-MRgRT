@@ -32,7 +32,7 @@ def correlation_matrix(df, outdir, plot=True):
         vals_ft1 = df[df["Feature"] == ft1]["FeatureValue"].values
         for j, ft2 in enumerate(features):
             vals_ft2 = df[df["Feature"] == ft2]["FeatureValue"].values
-            rho = stats.pearsonr(vals_ft1, vals_ft2)[0]
+            rho = stats.spearmanr(vals_ft1, vals_ft2)[0]
 
             matrix[i,j] = abs(rho)
     
