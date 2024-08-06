@@ -8,9 +8,7 @@ Performs feature selection
 
 AGR 8/4/2024
 '''
-import seaborn as sns
-import matplotlib.pyplot as plt
-from Functions import extraction as extr, reduction as red, delta_model as dm
+from functions import extraction as extr, reduction as red, delta_model as dm
 
 def main():
     '''
@@ -43,7 +41,7 @@ def main():
     # Remove features
     remove_fts_total = list(set(remove_fts_icc) | set(remove_fts_vol_man))
 
-    df_man = red.remove_fts(df_man, remove_fts_total, output_path)
+    df_man = red.remove_fts(df_man, remove_fts_total)
 
     print('-'*30)
     print('Feature selection...')

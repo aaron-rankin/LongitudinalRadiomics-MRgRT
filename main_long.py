@@ -9,13 +9,13 @@ Feature selection done by clustering similar feature trajectories
 AGR 03/04/2024
 '''
 
-from Functions import extraction as extr, reduction as red, longitudinal_model as lm
-import numpy as np
 import os
+from functions import extraction as extr, reduction as red, longitudinal_model as lm
 
 EXTRACT = False
 
-T_VALS = np.arange(0.5, 2.51, 0.25)
+# T_VALS = np.arange(1.75, 2.51, 0.25)
+T_VALS = [1.75]
 
 def main():
     '''
@@ -24,7 +24,7 @@ def main():
     for t_val in T_VALS:
         print('-'*30)
         print(f'Running pipeline for T = {t_val}')
-        tag = f"Sensitivity/Run-{t_val}"
+        tag = f"Submission-Long"
 
         output_path = extr.create_output_dirs(tag)
 
@@ -49,23 +49,15 @@ def main():
         remove_fts_vol_tp = red.volume_corr_tps(df_man, output_path)
         remove_fts_vol_traj  = red.volume_trajectory(df_man, output_path)
         
-        print('Auto Contours: ')
-        #auto_vol_tp = red.volume_corr_tps(df_auto, output_path)
-        #auto_vol_traj = red.volume_trajectory(df_auto, output_path)
-
         # ICC
         remove_fts_icc = red.icc_calculation(df_all, output_path)
 
         # Remove features
         remove_fts_total = list(set(remove_fts_vol_tp) | set(remove_fts_vol_traj) | set(remove_fts_icc))
-        # remove_fts_total_auto = list(set(auto_vol_tp) | set(auto_vol_traj) | set(remove_fts_icc))
+        df_man = red.remove_fts(df_man, remove_fts_total)
         
-        df_man = red.remove_fts(df_man, remove_fts_total, output_path)
-        # df_auto = red.remove_fts(df_auto, remove_fts_total_auto, output_path)
-
         print('-'*30)
         print('Feature selection...')
-
 
         # Longitudinal model
         print('Computing Euclidean distances:')
@@ -82,4 +74,5 @@ def main():
         print('-'*30)
 
 
-main()
+if __name__ == '__main__':
+    main()

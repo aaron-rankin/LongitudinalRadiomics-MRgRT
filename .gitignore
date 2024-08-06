@@ -1,3 +1,8 @@
+# Specific folders
+old/
+PaperMaterial/ExampleCluster/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -6,8 +11,7 @@ __pycache__/
 # C extensions
 *.so
 
-# Images
-*.png
+
 *.csv
 # Distribution / packaging
 .Python

@@ -248,7 +248,7 @@ def volume_trajectory(df_all, output_path, plot=False):
 
 ####################################################        
 
-def remove_fts(df_all, fts_remove, output_path):
+def remove_fts(df_all, fts_remove):
     """
     Remove features that have been identified as redundant.
     """
