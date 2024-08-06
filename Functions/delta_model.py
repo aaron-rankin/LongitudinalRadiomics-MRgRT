@@ -49,6 +49,51 @@ def correlation_matrix(df, outdir, plot=True):
     return df_corr
 
 ####################################################
+def feature_selection2(df_corr, outdir):
+    '''
+    Selects features based on corr matrix
+    If corr > 0.95 between 2 features, keep ft with lowest mean corr
+    across all other features
+    '''
+    fts_keep = []
+    fts_remove = []
+
+    for i in range(len(df_corr.columns)):
+        for j in range(i+1, len(df_corr.columns)):
+            if i != j:
+                if df_corr.iloc[i, j] >= 0.95:
+                    # get meean of each feature
+                    
+                    mean1 = np.mean(df_corr[df_corr.columns[i]])
+                    mean2 = np.mean(df_corr[df_corr.columns[j]])
+                    # keep lowest mean
+                    if mean1 < mean2:
+                        fts_keep.append(df_corr.columns[i])
+                        fts_remove.append(df_corr.columns[j])
+                    else:
+                        fts_keep.append(df_corr.columns[j])
+                        fts_remove.append(df_corr.columns[i])
+
+    # remove duplicates
+    fts_keep = list(set(fts_keep))
+    fts_remove = list(set(fts_remove))
+
+    # remove features from fts_keep
+    for ft in fts_remove:
+        if ft in fts_keep:
+            fts_keep.remove(ft)
+
+    print('-'*30)
+    print(f'Selected Features: ({len(fts_keep)})')
+    for ft in fts_keep:
+        print(ft)
+
+    df_fts = pd.DataFrame(fts_keep, columns=["Feature"])
+    df_fts.to_csv(outdir + "/features/Features_Selected.csv", index=False)
+
+    return None
+
+####################################################
 
 def feature_selection(df_corr, outdir):
     '''
@@ -67,14 +112,29 @@ def feature_selection(df_corr, outdir):
 
     results = np.zeros((len(features), len(features)))
     selected_features = []
+    remove_features = []
 
     for i in tqdm(range(len(features)-1)):
         for j in range(len(features)-1):
-            if array_corr[i,j] > 0.8:
-                results[i,j] = array_corr[i,j]
-                selected_features.append([features[i], features[j]])
+            
+            if i < j:
+                if array_corr[i,j] > 0.8:
+                    results[i,j] = array_corr[i,j]
+                    remove_features.append([features[i], features[j]])
+                else:
+                    results[i,j] = array_corr[i,j]
+                    selected_features.append([features[i], features[j]])
             else:
-                results[i,j] = array_corr[i,j]
+                results[i,j] = 1
+
+
+    features_keep = []
+
+    # loop through features in selected features and if not in remove features, add to keep features
+    for i in range(len(selected_features)):
+        if selected_features[i] not in remove_features:
+            features_keep.append(selected_features[i])
+
 
     df_res = pd.DataFrame(results, columns=features, index=features)
     
@@ -82,7 +142,7 @@ def feature_selection(df_corr, outdir):
     df_res = pd.DataFrame(results, columns=features, index=features)
     # heatmap of results
     plt.figure(figsize=(20,20))
-    sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=0.8, square=True)
+    sns.heatmap(df_res, cmap="RdBu_r", vmin=0, vmax=1, square=True)
     plt.savefig(outdir + "/CM/CorrMatrix-PreSelection.png")
     plt.close()
 

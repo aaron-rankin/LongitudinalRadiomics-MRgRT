@@ -15,7 +15,8 @@ import os
 
 EXTRACT = False
 
-T_VALS = np.arange(0.5, 2.51, 0.25)
+# T_VALS = np.arange(1.75, 2.51, 0.25)
+T_VALS = [1.75]
 
 def main():
     '''
@@ -24,7 +25,7 @@ def main():
     for t_val in T_VALS:
         print('-'*30)
         print(f'Running pipeline for T = {t_val}')
-        tag = f"Sensitivity/Run-{t_val}"
+        tag = f"Submission-Long"
 
         output_path = extr.create_output_dirs(tag)
 
