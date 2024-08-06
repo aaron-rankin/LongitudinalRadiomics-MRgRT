@@ -54,7 +54,7 @@ def main():
     '''
     
     tag1 = 'Submission-Delta' # add -Delta to tag
-    tag2 = 'Submission' 
+    tag2 = 'Submission-Long' 
 
     dir1 = os.path.join(os.getcwd(), 'Output', tag1, 'features')
     dir2 = os.path.join(os.getcwd(), 'Output', tag2, 'features')
