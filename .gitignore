@@ -1,8 +1,8 @@
 __pycache__/
 
-Input/
+Input/Default/*.csv
 Output/
 
-old/
+old/*
 PaperMaterial/ExampleCluster/
 
