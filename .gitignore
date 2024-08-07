@@ -1,8 +1,5 @@
-__pycache__/
-
-Input/
-Output/
-
+**pycache**/
+Input/Default/
 old/
 PaperMaterial/ExampleCluster/
-
+Output/
